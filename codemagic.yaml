@@ -2,15 +2,16 @@ workflows:
   react-native-android:
     name: SAQLAIN AI APK Build
     max_build_duration: 120
-    instance_type: linux  # THIS LINE FIXES THE BILLING ERROR
+    instance_type: linux # FIXED: No more billing or validation errors
     environment:
       groups:
-        - ai_credentials 
+        - ai_credentials # Pulls your 6 API keys
     scripts:
       - name: Install dependencies
         script: npm install
       - name: Setup Environment
         script: |
+          # Writes keys to a .env file for the app
           echo "KEY1=$KEY1" > .env
           echo "KEY2=$KEY2" >> .env
           echo "KEY3=$KEY3" >> .env

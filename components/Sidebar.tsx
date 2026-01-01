@@ -86,16 +86,16 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         <div className="p-6 border-t border-white/5 space-y-6">
-             {/* Savage Mode Toggle */}
+             {/* Increase Aura Toggle */}
              <div className="bg-surfaceLight/50 p-4 rounded-2xl border border-white/5">
                 <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-textPrimary uppercase tracking-tighter">Savage Protocol</span>
+                    <span className="text-xs font-bold text-textPrimary uppercase tracking-tighter">Increase Aura</span>
                     <label className="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" className="sr-only peer" checked={isSavageMode} onChange={(e) => onToggleSavageMode(e.target.checked)}/>
                         <div className="w-8 h-4 bg-gray-700 rounded-full peer peer-checked:bg-accent after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-4"></div>
                     </label>
                 </div>
-                <p className="text-[9px] text-gray-500 leading-tight">Enables aggressive roasting and unfiltered sarcasm.</p>
+                <p className="text-[9px] text-gray-500 leading-tight">Enables aggressive roasting and unfiltered response presence.</p>
              </div>
 
              <div className="flex items-center justify-between opacity-50">

@@ -144,7 +144,7 @@ const App: React.FC = () => {
                 SAQLAIN AI <span className="text-accent">PRO</span>
             </div>
             <div className="w-10 flex justify-end">
-                {isSavageMode && <span title="Savage Mode ON" className="text-xl animate-bounce">💀</span>}
+                {isSavageMode && <span title="Aura Increased" className="text-xl animate-bounce">💀</span>}
             </div>
         </div>
         <Sidebar 

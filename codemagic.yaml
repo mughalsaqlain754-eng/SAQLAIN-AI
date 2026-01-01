@@ -2,10 +2,10 @@ workflows:
   react-native-android:
     name: SAQLAIN AI APK Build
     max_build_duration: 120
-    instance_type: linux_x86_64
+    instance_type: linux # FIXED: Uses plain text 'linux' instead of a variable
     environment:
       groups:
-        - ai_credentials # Pulls KEY1, KEY2, KEY3, KEY4, KEY5, and KEY6 from the UI
+        - ai_credentials # Pulls your 6 API keys from the UI
       vars:
         PACKAGE_NAME: "com.saqlainai" 
     scripts:
@@ -13,7 +13,7 @@ workflows:
         script: npm install
       - name: Setup Environment Variables
         script: |
-          # Creates a .env file with all 6 keys for the app to read
+          # Creates the .env file for your React Native app
           echo "KEY1=$KEY1" > .env
           echo "KEY2=$KEY2" >> .env
           echo "KEY3=$KEY3" >> .env

@@ -2,7 +2,7 @@ workflows:
   react-native-android:
     name: SAQLAIN AI APK Build
     max_build_duration: 120
-    instance_type: linux
+    instance_type: linux_x86_64
     environment:
       groups:
         - ai_credentials # Pulls KEY1, KEY2, KEY3, KEY4, KEY5, and KEY6 from the UI

@@ -1,0 +1,29 @@
+workflows:
+  android-release-build:
+    name: SAQLAIN AI APK Build
+    max_build_duration: 120
+    instance_type: linux_x86_64 # FIXED: Standard free-tier instance
+    environment:
+      groups:
+        - ai_credentials # Ensure KEY1 to KEY6 are added in this group in the UI
+      vars:
+        PACKAGE_NAME: "com.saqlainai"
+      flutter: stable
+    scripts:
+      - name: Setup Environment Variables
+        script: |
+          # Creates a .env file that pulls your 6 keys from Codemagic UI
+          echo "KEY1=$KEY1" > .env
+          echo "KEY2=$KEY2" >> .env
+          echo "KEY3=$KEY3" >> .env
+          echo "KEY4=$KEY4" >> .env
+          echo "KEY5=$KEY5" >> .env
+          echo "KEY6=$KEY6" >> .env
+      - name: Get dependencies
+        script: |
+          flutter pub get
+      - name: Build Android APK
+        script: |
+          flutter build apk --release
+    artifacts:
+      - build/app/outputs/flutter-apk/*.apk

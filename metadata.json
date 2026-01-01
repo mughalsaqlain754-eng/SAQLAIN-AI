@@ -1,0 +1,9 @@
+{
+  "name": "SAQLAIN AI PRO",
+  "description": "Enterprise-grade AI Assistant powered by Gemini. Features real-time search, Savage Mode roasting, and advanced media analysis.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}

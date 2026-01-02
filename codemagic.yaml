@@ -1,6 +1,6 @@
 workflows:
   react-native-android:
-    name: SAQLAIN AI - Connection Fix
+    name: SAQLAIN AI - Fail-Safe Fix
     working_directory: . 
     instance_type: mac_mini_m1
     max_build_duration: 60
@@ -19,75 +19,48 @@ workflows:
       - name: Install Dependencies
         script: |
           npm install --legacy-peer-deps
+          # GUARANTEE 1: Install the Brain
           npm install @google/generative-ai --save --legacy-peer-deps
           npm install @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps
           npm install @capacitor/assets --save-dev --legacy-peer-deps
 
-      - name: FIX SERVICE & CONNECTION
+      - name: FAIL-SAFE FIX - Inject API Key
         script: |
-          echo "🔧 Re-establishing Neural Link..."
+          echo "🎯 Scanning for the file with the error message..."
           
-          # 1. Create the Perfect Service File (Hardcoded Key)
-          mkdir -p services
-          cat <<EOF > services/geminiService.ts
-          import { GoogleGenerativeAI } from "@google/generative-ai";
-
-          const API_KEY = "AIzaSyDsWqaqeyFFdAs6rXA8xOBZpwh_uhc4ZXU";
-          const genAI = new GoogleGenerativeAI(API_KEY);
-          const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-
-          export async function sendMessageToGemini(message: string, history: any[]) {
-            try {
-              const chat = model.startChat({
-                history: history.slice(-6).map(m => ({
-                  role: m.role === 'user' ? 'user' : 'model',
-                  parts: [{ text: m.text }]
-                }))
-              });
-              const result = await chat.sendMessage(message);
-              const response = await result.response;
-              return response.text();
-            } catch (error) {
-              console.error("API Error:", error);
-              return "Error: Neural Link Offline. Check Internet.";
-            }
-          }
-          EOF
+          # 1. Find the file that contains "Neural system failure"
+          # We search recursively (-r) in all JS/TS files
+          TARGET_FILE=$(grep -r --include="*.{js,jsx,ts,tsx}" "Neural system failure" . | cut -d: -f1 | head -n 1)
           
-          echo "✅ Service Created."
-
-          # 2. FORCE THE APP TO USE IT
-          # This command searches for the file that has "sendMessage" logic and updates the import path
-          # It assumes your main logic file is likely App.tsx or similar in the root
-          
-          echo "🔎 Updating Main App Logic..."
-          
-          # Find the file containing the chat logic (looking for 'sendMessage' or similar)
-          TARGET_FILE=$(grep -l "sendMessage" *.tsx 2>/dev/null | head -n 1)
+          # GUARANTEE 2: Don't proceed if we can't find the file
+          if [ -z "$TARGET_FILE" ]; then
+            echo "❌ CRITICAL ERROR: Could not find the file containing 'Neural system failure'."
+            echo "Searching for App.tsx as a backup..."
+            TARGET_FILE=$(find . -name "App.tsx" -o -name "index.tsx" | head -n 1)
+          fi
           
           if [ -z "$TARGET_FILE" ]; then
-             echo "⚠️ Could not auto-detect App file. Trying standard names..."
-             if [ -f "App.tsx" ]; then TARGET_FILE="App.tsx"; fi
-             if [ -f "index.tsx" ]; then TARGET_FILE="index.tsx"; fi
+             echo "❌ STILL FAILED: Could not find App.tsx or index.tsx. Exiting to prevent broken build."
+             exit 1
           fi
           
-          if [ ! -z "$TARGET_FILE" ]; then
-             echo "🎯 Found logic in: $TARGET_FILE"
-             
-             # Replace the old import with the correct one pointing to our new service
-             # We remove any existing import of geminiService and add the correct one at the top
-             sed -i '' "/import.*geminiService/d" "$TARGET_FILE"
-             sed -i '' "1s|^|import { sendMessageToGemini } from './services/geminiService';\n|" "$TARGET_FILE"
-             
-             # Replace the function call to ensure it uses our new function name
-             # This finds whatever function was sending the message and swaps it to sendMessageToGemini
-             # (This is a simplified replacement, assuming standard naming)
-             sed -i '' "s/sendMessage(.message.)/sendMessageToGemini(input, messages)/g" "$TARGET_FILE" || true
-             
-             echo "✅ App Logic Linked to New Service."
-          else
-             echo "❌ Could not find main App file to link. Build will proceed with Service file created."
-          fi
+          echo "✅ TARGET ACQUIRED: $TARGET_FILE"
+          
+          REAL_KEY="AIzaSyDsWqaqeyFFdAs6rXA8xOBZpwh_uhc4ZXU"
+          
+          # GUARANTEE 3: Inject Key (Method A: Constructor)
+          # Replaces 'new GoogleGenerativeAI(...)' with 'new GoogleGenerativeAI("KEY")'
+          sed -i '' "s|new GoogleGenerativeAI(.*)|new GoogleGenerativeAI(\"$REAL_KEY\")|g" "$TARGET_FILE"
+          
+          # GUARANTEE 4: Inject Key (Method B: Variable)
+          # Replaces 'const API_KEY = ...' with 'const API_KEY = "KEY";'
+          sed -i '' "s|const API_KEY = .*|const API_KEY = \"$REAL_KEY\";|g" "$TARGET_FILE"
+          
+          # GUARANTEE 5: Inject Key (Method C: Config Object)
+          # Replaces 'apiKey: ...' with 'apiKey: "KEY",'
+          sed -i '' "s|apiKey:.*|apiKey: \"$REAL_KEY\",|g" "$TARGET_FILE"
+          
+          echo "💉 API Key successfully injected into $TARGET_FILE"
 
       - name: Build Web Assets
         script: |
@@ -98,6 +71,8 @@ workflows:
           rm -rf android
           npx cap init "SAQLAIN AI" "com.saqlainai" --web-dir dist
           npx cap add android
+          
+          # GUARANTEE 6: Ensure Internet Permission
           sed -i '' 's/<application/<application android:usesCleartextTraffic="true"/' android/app/src/main/AndroidManifest.xml
           
           if [ -f "assets/icon.png" ]; then

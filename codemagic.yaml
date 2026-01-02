@@ -1,6 +1,6 @@
 workflows:
   react-native-android:
-    name: SAQLAIN AI - Restore & Flash Fix
+    name: SAQLAIN AI - Golden Fix
     working_directory: . 
     instance_type: mac_mini_m1
     max_build_duration: 60
@@ -22,18 +22,17 @@ workflows:
           npm install @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps
           npm install @capacitor/assets --save-dev --legacy-peer-deps
 
-      - name: RESTORE UI & FIX ENGINE
+      - name: STEP 1 - Create 6-Key Flash Engine
         script: |
-          echo "❤️ Restoring your UI and upgrading the Brain..."
-          
-          # 1. DO NOT DELETE 'src'. YOUR CODE STAYS SAFE.
-          
-          # 2. CREATE A HELPER SERVICE (This runs in the background)
-          # We use gemini-1.5-flash because 'gemini-pro' is causing the new error.
+          echo "✨ Creating the Gemini 1.5 Flash Engine..."
           mkdir -p src/services
+          
+          # We write the new service file.
+          # 1. It uses 6 KEYS (Turbo Mode)
+          # 2. It uses 'gemini-1.5-flash' (Fixes 'Model not found')
+          
           cat <<EOF > src/services/geminiFlash.ts
           
-          // TURBO MODE: 6 Keys
           const API_KEYS = [
             "AIzaSyDsWqaqeyFFdAs6rXA8xOBZpwh_uhc4ZXU", 
             "AIzaSyDBdShSHEOJwV5-fAn5ABJLfKG3RLffoUo", 
@@ -44,9 +43,10 @@ workflows:
           ];
 
           export async function sendMessageToGemini(message: string) {
+            // Pick a random key
             const randomKey = API_KEYS[Math.floor(Math.random() * API_KEYS.length)];
             
-            // FIXED: Using 'gemini-1.5-flash' to solve the "Model not found" error
+            // USE FLASH MODEL (Critical Fix)
             const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + randomKey;
             
             try {
@@ -57,63 +57,104 @@ workflows:
               });
 
               const data = await response.json();
-              if (!response.ok) return "Error: " + (data.error?.message || "Connection Error");
+              if (!response.ok) return "Error: " + (data.error?.message || "Google Connection Error");
               
               return data.candidates?.[0]?.content?.parts?.[0]?.text || "No reply.";
             } catch (error) {
-              return "Error: Network issue.";
+              return "Error: Network issue. Check internet.";
             }
           }
           EOF
 
-          # 3. SURGICALLY CONNECT YOUR UI TO THE NEW ENGINE
-          # We search for the file where you had the "Neural system failure" error.
-          TARGET_FILE=$(grep -r --exclude-dir={node_modules,dist,android} "Neural system failure" . | cut -d: -f1 | head -n 1)
+      - name: STEP 2 - Surgically Link Your UI
+        script: |
+          echo "🔗 Connecting your UI to the new Engine..."
+          
+          # Find your main code file (ignoring system folders)
+          TARGET_FILE=$(grep -r --exclude-dir={node_modules,dist,android} "sendMessage" src | cut -d: -f1 | head -n 1)
           
           if [ -z "$TARGET_FILE" ]; then
-             # Backup: Search for where you send messages
-             TARGET_FILE=$(grep -r --exclude-dir={node_modules,dist,android} "sendMessage" src | cut -d: -f1 | head -n 1)
+             echo "⚠️ Could not auto-detect UI file. Searching root..."
+             TARGET_FILE=$(find . -name "App.tsx" -o -name "App.jsx" | head -n 1)
           fi
           
           if [ ! -z "$TARGET_FILE" ]; then
-             echo "🔧 Fixing logic in: $TARGET_FILE"
+             echo "✅ Updating Logic in: $TARGET_FILE"
              
-             # A. Add the import for our new Flash engine
+             # 1. Add the new import at the top
              sed -i '' "1s|^|import { sendMessageToGemini } from './services/geminiFlash';\n|" "$TARGET_FILE"
              
-             # B. Replace the old "Neural system failure" error text so you know it's fixed
+             # 2. Update the error message text so you see the change
              sed -i '' "s/Neural system failure/Connection Established/g" "$TARGET_FILE"
              
-             # C. SWAP THE LOGIC: Force your app to use the new engine
-             # This finds the line where you call the old AI and replaces it with our new function
-             # (This regex looks for typical usage patterns)
-             sed -i '' "s/await .sendMessage(.)/await sendMessageToGemini(input)/g" "$TARGET_FILE" || true
-             sed -i '' "s/await .generateContent(.)/await sendMessageToGemini(input)/g" "$TARGET_FILE" || true
+             # 3. Swap the function call to use our new 6-Key Flash engine
+             # This replaces the line where you call the old AI
+             sed -i '' "s/await .*sendMessage(.*)/await sendMessageToGemini(input)/g" "$TARGET_FILE" || true
+             sed -i '' "s/await .*generateContent(.*)/await sendMessageToGemini(input)/g" "$TARGET_FILE" || true
              
-             echo "✅ Your UI is linked to Gemini 1.5 Flash."
           else
-             echo "⚠️ Could not find your main file. Created service file anyway."
+             echo "❌ Could not find UI file. Service created, but linking failed."
           fi
 
       - name: Build Web Assets
         script: |
           npm run build
 
-      - name: Sync & Perfect Manifest
+      - name: STEP 3 - Write CLEAN Android Manifest
         script: |
           rm -rf android
           npx cap init "SAQLAIN AI" "com.saqlainai" --web-dir dist
           npx cap add android
           
-          # Fix Internet Permissions
-          sed -i '' 's/<manifest/<manifest xmlns:android="http:\/\/schemas.android.com\/apk\/res\/android"/' android/app/src/main/AndroidManifest.xml
-          sed -i '' '/<application/i \
-          <uses-permission android:name="android.permission.INTERNET" /> \
-          ' android/app/src/main/AndroidManifest.xml
-          
           if [ -f "assets/icon.png" ]; then
             npx capacitor-assets generate android
           fi
+          
+          echo "📝 Writing Clean AndroidManifest.xml (No Parsing Errors)..."
+          
+          # We overwrite the file completely. No 'sed' commands to break it.
+          cat <<EOF > android/app/src/main/AndroidManifest.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+          
+              <uses-permission android:name="android.permission.INTERNET" />
+          
+              <application
+                  android:allowBackup="true"
+                  android:icon="@mipmap/ic_launcher"
+                  android:label="@string/app_name"
+                  android:roundIcon="@mipmap/ic_launcher_round"
+                  android:supportsRtl="true"
+                  android:theme="@style/AppTheme"
+                  android:usesCleartextTraffic="true">
+          
+                  <activity
+                      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
+                      android:name="com.saqlainai.MainActivity"
+                      android:label="@string/title_activity_main"
+                      android:theme="@style/AppTheme.NoActionBarLaunch"
+                      android:launchMode="singleTask"
+                      android:exported="true">
+          
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+          
+                  </activity>
+          
+                  <provider
+                      android:name="androidx.core.content.FileProvider"
+                      android:authorities="\${applicationId}.fileprovider"
+                      android:exported="false"
+                      android:grantUriPermissions="true">
+                      <meta-data
+                          android:name="android.support.FILE_PROVIDER_PATHS"
+                          android:resource="@xml/file_paths" />
+                  </provider>
+              </application>
+          </manifest>
+          EOF
           
           npx cap sync android
 

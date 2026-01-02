@@ -5,18 +5,12 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   
-  // 1. Android Fix
+  // CRITICAL: Keeps the app working on Android
   base: './', 
   
   build: {
     outDir: 'dist',
     emptyOutDir: true,
-  },
-
-  // 2. CLEAN DEFINITION (No duplicates, no weird quotes)
-  define: {
-    'process.env.GEMINI_API_KEY': JSON.stringify("AIzaSyDsWqaqeyFFdAs6rXA8xOBZpwh_uhc4ZXU"),
-    'import.meta.env.VITE_GEMINI_API_KEY': JSON.stringify("AIzaSyDsWqaqeyFFdAs6rXA8xOBZpwh_uhc4ZXU"),
   },
   
   server: {

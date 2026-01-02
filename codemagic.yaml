@@ -1,6 +1,6 @@
 workflows:
   react-native-android:
-    name: SAQLAIN AI Build (Final Fix)
+    name: SAQLAIN AI - API Key Fix
     working_directory: . 
     instance_type: mac_mini_m1
     max_build_duration: 60
@@ -14,14 +14,37 @@ workflows:
     scripts:
       - name: Setup Environment Variables
         script: |
-          printf "KEY1=%s\nKEY2=%s\nKEY3=%s\nKEY4=%s\nKEY5=%s\nKEY6=%s\n" \
-          "$KEY1" "$KEY2" "$KEY3" "$KEY4" "$KEY5" "$KEY6" > .env
+          printf "KEY1=%s\n" "$KEY1" > .env
       
       - name: Install Dependencies
         script: |
           npm install --legacy-peer-deps
           npm install @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps
           npm install @capacitor/assets --save-dev --legacy-peer-deps
+
+      - name: SURGEON FIX - Inject API Key Directly into Code
+        script: |
+          echo "Starting Open-Heart Surgery on the Code..."
+          
+          # Your Real API Key
+          REAL_KEY="AIzaSyDsWqaqeyFFdAs6rXA8xOBZpwh_uhc4ZXU"
+          
+          # 1. Replaces process.env.GEMINI_API_KEY
+          LC_ALL=C find src -type f -exec sed -i '' "s/process.env.GEMINI_API_KEY/\"$REAL_KEY\"/g" {} +
+          
+          # 2. Replaces import.meta.env.VITE_GEMINI_API_KEY
+          LC_ALL=C find src -type f -exec sed -i '' "s/import.meta.env.VITE_GEMINI_API_KEY/\"$REAL_KEY\"/g" {} +
+          
+          # 3. Replaces generic VITE_API_KEY
+          LC_ALL=C find src -type f -exec sed -i '' "s/import.meta.env.VITE_API_KEY/\"$REAL_KEY\"/g" {} +
+          
+          # 4. Replaces REACT_APP_GEMINI_API_KEY
+          LC_ALL=C find src -type f -exec sed -i '' "s/process.env.REACT_APP_GEMINI_API_KEY/\"$REAL_KEY\"/g" {} +
+          
+          # 5. Replaces plain GEMINI_API_KEY
+          LC_ALL=C find src -type f -exec sed -i '' "s/import.meta.env.GEMINI_API_KEY/\"$REAL_KEY\"/g" {} +
+          
+          echo "Surgery Complete. API Key has been physically implanted."
 
       - name: Build Web Assets
         script: |

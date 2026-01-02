@@ -15,8 +15,6 @@ const App: React.FC = () => {
   const [history, setHistory] = useState<ChatSession[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
 
-  // 1. Initial Load: Only get the persisted history archive. 
-  // We no longer automatically restore a partial/active unsaved session to satisfy "don't save every message".
   useEffect(() => {
     const savedHistory = localStorage.getItem('saqlain_ai_history');
     if (savedHistory) {
@@ -26,8 +24,6 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // 2. Archive Function: Commits the current state of messages into the "History Archive" exactly ONCE.
-  // This satisfies the request to save the session at once rather than every message.
   const archiveCurrentChat = useCallback(() => {
     if (messages.length === 0) return;
 
@@ -52,7 +48,6 @@ const App: React.FC = () => {
         newHistory.unshift(sessionData);
       }
 
-      // Keep recent entries at the top
       newHistory.sort((a, b) => b.timestamp - a.timestamp);
       localStorage.setItem('saqlain_ai_history', JSON.stringify(newHistory));
       return newHistory;
@@ -66,7 +61,6 @@ const App: React.FC = () => {
       return newHistory;
     });
     
-    // If we're deleting the currently active (but unsaved) chat, clear the state
     if (currentChatId === chatId) {
       setMessages([]);
       setCurrentChatId(null);
@@ -114,7 +108,7 @@ const App: React.FC = () => {
             ));
       });
 
-      const isError = responseObj.text.includes("⚠️ SYSTEM ERROR") || responseObj.text.includes("⚠️ ENGINE OVERLOAD");
+      const isError = responseObj.text.includes("SYSTEM ERROR") || responseObj.text.includes("ENGINE OVERLOAD");
       
       setMessages(prev => prev.map(msg => 
           msg.id === aiMsgId 
@@ -122,17 +116,28 @@ const App: React.FC = () => {
               : msg
       ));
       
-    } catch (error) {
+    } catch (error: any) {
        setMessages(prev => {
           const aiMsg = prev.find(m => m.id === aiMsgId);
           if (aiMsg && aiMsg.text.length > 20) {
-             return prev.map(msg => msg.id === aiMsgId ? { ...msg, text: msg.text + "\n\n⚠️ [STREAM INTERRUPTED]" } : msg);
+             return prev.map(msg => msg.id === aiMsgId ? { ...msg, text: msg.text + "\n\nNeural link interrupted" } : msg);
+          }
+          
+          let errorMessage = "Neural system failure. Retry again.";
+          const errorStr = error.message?.toLowerCase() || "";
+          
+          if (errorStr.includes("429") || errorStr.includes("quota") || errorStr.includes("rate limit")) {
+            errorMessage = "Neural link congested. Too many requests. Wait a minute.";
+          } else if (errorStr.includes("403") || errorStr.includes("permission") || errorStr.includes("api key")) {
+            errorMessage = "Access denied. Invalid API key or permission error.";
+          } else if (errorStr.includes("fetch") || errorStr.includes("network") || errorStr.includes("connection")) {
+            errorMessage = "Connection unstable. Check your network link.";
           }
           
           const errorMsg: Message = {
             id: (Date.now() + 2).toString(),
             role: 'model',
-            text: "Neural Link timed out. Please retry.",
+            text: errorMessage,
             timestamp: Date.now(),
             isError: true
           };
@@ -144,7 +149,6 @@ const App: React.FC = () => {
   }, [messages, currentChatId, isSavageMode]);
 
   const startNewChat = () => {
-      // "Save once" happens when starting a new session
       archiveCurrentChat();
       setMessages([]);
       setCurrentChatId(null);
@@ -152,9 +156,7 @@ const App: React.FC = () => {
   };
 
   const loadChat = (session: ChatSession) => {
-      // "Save once" happens when switching to an archived session
       archiveCurrentChat();
-      
       setCurrentChatId(session.id);
       setMessages(session.messages);
       setIsSidebarOpen(false);

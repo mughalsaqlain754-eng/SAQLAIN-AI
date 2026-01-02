@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import ReactMarkdown from 'react-markdown';
 import { Message } from '../types';
 
 interface MessageBubbleProps {
@@ -18,208 +17,123 @@ const RobotIcon = () => (
 );
 
 const CopyIcon = () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3">
-        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+    <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 -960 960 960" width="18" fill="currentColor">
+        <path d="M360-240q-33 0-56.5-23.5T280-320v-480q0-33 23.5-56.5T360-880h360q33 0 56.5 23.5T800-800v480q0 33-23.5 56.5T720-240H360Zm0-80h360v-480H360v480ZM200-80q-33 0-56.5-23.5T120-160v-560h80v560h440v80H200Zm160-240v-480 480Z"/>
     </svg>
 );
 
 const CheckIcon = () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3 text-accent">
-        <polyline points="20 6 9 17 4 12"></polyline>
+    <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 -960 960 960" width="18" fill="currentColor" className="text-accent">
+        <path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
     </svg>
 );
 
-const ShieldCheck = () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-emerald-400">
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-        <path d="m9 12 2 2 4-4"></path>
+const DownloadIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 -960 960 960" width="18" fill="currentColor">
+        <path d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/>
     </svg>
 );
-
-const isRTL = (text: string): boolean => {
-  const rtlChars = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF\u0590-\u05FF]/;
-  return rtlChars.test(text);
-};
 
 const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isStreaming = false }) => {
   const isUser = message.role === 'user';
   const [copied, setCopied] = useState(false);
   
-  const textIsRTL = isRTL(message.text);
-  
-  const isIntelligenceReport = 
-    message.text.includes('INTELLIGENCE REPORT') || 
-    message.text.includes('SIM DATA') || 
-    message.text.includes('SUCCESS RATE') ||
-    message.text.includes('SECURITY RESEARCH') ||
-    message.text.includes('VULNERABILITY');
-
   const handleCopy = () => {
     navigator.clipboard.writeText(message.text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const confidenceMatch = message.text.match(/SUCCESS RATE.*?:?\s*(\d+)%/i);
-  const confidenceValue = confidenceMatch ? parseInt(confidenceMatch[1]) : null;
-
-  // Only show sources if the message text contains evidence of links or sources being requested/provided
-  const showGrounding = message.sources && message.sources.length > 0 && 
-    (message.text.toLowerCase().includes('http') || 
-     message.text.toLowerCase().includes('source') || 
-     message.text.toLowerCase().includes('link'));
+  const handleDownload = () => {
+    const element = document.createElement("a");
+    const file = new Blob([message.text], {type: 'text/plain'});
+    element.href = URL.createObjectURL(file);
+    element.download = `saqlain-ai-solution-${message.id.slice(-4)}.txt`;
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+  };
 
   return (
-    <div className={`flex w-full mb-8 animate-slide-up ${isUser ? 'justify-end' : 'justify-start'}`}>
-      <div className={`flex max-w-[85%] lg:max-w-[75%] ${isUser ? 'flex-row-reverse' : 'flex-row'} items-start gap-3`}>
+    <div className={`flex w-full mb-6 animate-slide-up ${isUser ? 'justify-end' : 'justify-start'}`}>
+      <div className={`flex max-w-[95%] lg:max-w-[85%] ${isUser ? 'flex-row-reverse' : 'flex-row'} items-start gap-3`}>
         
         {!isUser && (
           <div className="relative shrink-0 mt-1">
-            <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center shadow-[0_0_10px_rgba(77,124,255,0.3)] border border-accent/20">
+            <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center border border-accent/20 shadow-[0_0_10px_rgba(77,124,255,0.2)]">
                <RobotIcon />
             </div>
             {isStreaming && (
-              <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-background rounded-full flex items-center justify-center p-[2px]">
-                <div className="w-full h-full bg-accent rounded-full animate-pulse shadow-[0_0_5px_rgba(77,124,255,1)]"></div>
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-background rounded-full flex items-center justify-center p-[2px]">
+                <div className="w-full h-full bg-accent rounded-full animate-pulse shadow-[0_0_5px_rgba(77,124,255,0.8)]"></div>
               </div>
             )}
           </div>
         )}
 
-        <div className="flex flex-col flex-1">
-            <div 
-                className={`relative px-4 py-3 shadow-sm ${
-                isUser 
-                    ? 'bg-surfaceLight text-textPrimary rounded-2xl rounded-tr-none border border-white/5' 
-                    : isIntelligenceReport 
-                        ? 'bg-[#111111] rounded-2xl border border-accent/30 shadow-[0_0_20px_rgba(77,124,255,0.05)]'
-                        : 'bg-transparent text-textPrimary'
-                }`}
-            >
-                {isIntelligenceReport && confidenceValue !== null && (
-                    <div className={`absolute -top-3 ${textIsRTL ? 'left-4' : 'right-4'} flex items-center gap-1.5 px-3 py-1 bg-background border border-accent/30 rounded-full shadow-lg z-10`}>
-                        <div className={`w-1.5 h-1.5 rounded-full ${confidenceValue > 80 ? 'bg-emerald-500' : 'bg-amber-500'} animate-pulse`}></div>
-                        <span className="text-[9px] font-bold text-textPrimary font-mono uppercase tracking-widest">Confidence: {confidenceValue}%</span>
-                    </div>
-                )}
-
+        <div className="flex flex-col flex-1 min-w-0">
+            <div className={`relative px-4 py-3 ${isUser ? 'bg-surfaceLight rounded-2xl rounded-tr-none border border-white/5 shadow-sm' : 'bg-transparent text-textPrimary'}`}>
+                
                 {message.attachments && message.attachments.length > 0 && (
-                <div className={`mb-3 flex flex-wrap gap-2 ${isUser ? 'justify-end' : ''}`} dir="ltr">
+                <div className={`mb-3 flex flex-wrap gap-2 ${isUser ? 'justify-end' : ''}`}>
                     {message.attachments.map((att, idx) => (
                     att.mimeType.startsWith('image/') ? (
-                        <img 
-                            key={idx} 
-                            src={att.data} 
-                            alt="attachment" 
-                            className="h-40 w-auto rounded-xl object-cover border border-white/10 hover:border-accent/50 transition-colors cursor-zoom-in"
-                        />
+                        <img key={idx} src={att.data} alt="attachment" className="h-64 md:h-80 rounded-xl object-cover border border-white/10 shadow-lg" />
                     ) : (
-                        <div key={idx} className="flex items-center gap-2 bg-surfaceLight p-3 rounded-xl text-xs border border-white/5">
-                            <span className="text-accent text-lg">📄</span>
-                            <span className="font-mono">{att.name || 'document.pdf'}</span>
+                        <div key={idx} className="flex items-center gap-2 bg-surfaceLight p-3 rounded-xl text-[10px] font-mono border border-white/5 uppercase tracking-wider">
+                            <span className="text-accent font-bold">Document</span>
+                            <span className="opacity-60">{att.name}</span>
                         </div>
                     )
                     ))}
                 </div>
                 )}
 
-                <div className={`prose prose-invert max-w-none ${isUser ? 'text-sm' : 'text-base leading-relaxed'}`}>
-                <ReactMarkdown
-                    components={{
-                        code({node, inline, className, children, ...props}: any) {
-                            const match = /language-(\w+)/.exec(className || '')
-                            return !inline && match ? (
-                            <div className="relative group my-6 overflow-hidden rounded-xl border border-white/10" dir="ltr">
-                                <div className="flex items-center justify-between bg-[#1a1a1a] px-4 py-2 text-[10px] uppercase tracking-widest text-gray-400 font-mono">
-                                    <span>{match[1]}</span>
-                                    <button onClick={() => navigator.clipboard.writeText(String(children))} className="hover:text-accent transition-colors">COPY</button>
-                                </div>
-                                <pre className="bg-[#0f0f0f] p-4 overflow-x-auto m-0">
-                                    <code className={`${className} font-mono text-sm`} {...props}>
-                                        {children}
-                                    </code>
-                                </pre>
-                            </div>
-                            ) : (
-                            <code className="bg-white/10 px-1.5 py-0.5 rounded text-accent font-mono text-sm" {...props}>
-                                {children}
-                            </code>
-                            )
-                        },
-                        p: ({children}) => {
-                            const pText = String(children);
-                            const pIsRTL = isRTL(pText);
-                            return (
-                                <p 
-                                    className={`mb-4 last:mb-0 ${pIsRTL ? 'text-right font-sans' : 'text-left'}`}
-                                    dir={pIsRTL ? 'rtl' : 'ltr'}
-                                >
-                                    {children}
-                                </p>
-                            );
-                        },
-                        li: ({children}) => {
-                            const liText = String(children);
-                            const liIsRTL = isRTL(liText);
-                            return (
-                                <li 
-                                    className={`${liIsRTL ? 'text-right font-sans' : 'text-left'}`}
-                                    dir={liIsRTL ? 'rtl' : 'ltr'}
-                                >
-                                    {children}
-                                </li>
-                            );
-                        },
-                        strong: ({children}) => <strong className="text-accent font-bold">{children}</strong>,
-                        a: ({href, children}) => <a href={href} target="_blank" className="text-accent hover:underline">{children}</a>
-                    }}
-                >
+                <div className={`whitespace-pre-wrap text-lg md:text-xl leading-relaxed break-words font-sans tracking-tight ${!isUser ? 'selection:bg-accent/30' : ''}`}>
                     {message.text}
-                </ReactMarkdown>
                 </div>
 
-                {/* Grounding Sources - Controlled Visibility */}
-                {showGrounding && (
-                    <div className="mt-5 p-4 rounded-xl bg-[#0d0d0d] border border-white/5 shadow-inner" dir="ltr">
-                        <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-2">
-                                <ShieldCheck />
-                                <span className="text-[10px] font-bold text-accent uppercase tracking-widest font-mono">Real-Time Intelligence</span>
-                            </div>
-                            <span className="text-[9px] text-gray-600 font-mono px-2 py-0.5 rounded-full bg-white/5 border border-white/5">VERIFIED</span>
-                        </div>
-                        <div className="grid grid-cols-1 gap-1.5">
-                            {message.sources!.map((source, idx) => (
-                                <a 
-                                    key={idx} 
-                                    href={source.uri} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="text-[11px] text-textSecondary hover:text-white transition-all flex items-center gap-3 py-1 group/link"
-                                >
-                                    <span className="shrink-0 text-[10px] text-accent/40 font-mono group-hover/link:text-accent transition-colors">[{idx + 1}]</span>
-                                    <span className="truncate underline decoration-white/10 group-hover/link:decoration-accent/40">{source.title}</span>
-                                    <svg className="w-3 h-3 opacity-0 group-hover/link:opacity-100 transition-opacity ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                                </a>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
                 {!isUser && !message.isError && !isStreaming && (
-                <div className={`mt-4 pt-4 border-t border-white/5 flex items-center justify-between ${textIsRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-                    <button 
-                        onClick={handleCopy}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surfaceLight border border-white/5 text-[10px] font-mono tracking-widest text-gray-400 hover:text-accent hover:border-accent/30 transition-all uppercase group"
-                    >
-                        {copied ? <CheckIcon /> : <CopyIcon />}
-                        <span>{copied ? 'Copied' : 'Copy'}</span>
-                    </button>
-                    {showGrounding && (
-                        <div className="flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]"></span>
-                            <span className="text-[9px] font-mono text-gray-500 uppercase tracking-widest">{message.sources!.length} Data Points</span>
+                <div className="mt-4 pt-3 border-t border-white/5 flex flex-col gap-4">
+                    <div className="flex items-center gap-2">
+                        <button 
+                            onClick={handleCopy}
+                            className="p-2 text-gray-500 hover:text-accent hover:bg-white/5 rounded-lg transition-all flex items-center gap-2 group"
+                            title="Copy text"
+                        >
+                            {copied ? <CheckIcon /> : <CopyIcon />}
+                            <span className="text-[9px] font-mono uppercase tracking-widest font-bold opacity-0 group-hover:opacity-100 transition-opacity">Copy</span>
+                        </button>
+
+                        <button 
+                            onClick={handleDownload}
+                            className="p-2 text-gray-500 hover:text-accent hover:bg-white/5 rounded-lg transition-all flex items-center gap-2 group"
+                            title="Download as text file"
+                        >
+                            <DownloadIcon />
+                            <span className="text-[9px] font-mono uppercase tracking-widest font-bold opacity-0 group-hover:opacity-100 transition-opacity">Download</span>
+                        </button>
+                    </div>
+                    
+                    {message.sources && message.sources.length > 0 && (
+                        <div className="flex flex-col gap-2">
+                            <div className="text-[9px] font-mono text-gray-600 uppercase tracking-widest border-l-2 border-accent pl-2">
+                                External Grounding:
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                {message.sources.map((source, sIdx) => (
+                                    <a 
+                                        key={sIdx} 
+                                        href={source.uri} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="text-[10px] font-mono bg-white/5 hover:bg-accent/10 border border-white/10 px-2 py-1 rounded text-accent transition-all truncate max-w-[250px]"
+                                        title={source.title}
+                                    >
+                                        {source.title || 'Source Reference'}
+                                    </a>
+                                ))}
+                            </div>
                         </div>
                     )}
                 </div>

@@ -1,53 +1,30 @@
 import { GoogleGenAI, GenerateContentResponse, Content } from "@google/genai";
 import { Attachment, Message } from "../types";
 
+// Using 'gemini-3-flash-preview' for high-speed academic processing.
 const MODEL_NAME = "gemini-3-flash-preview";
 
-const SYSTEM_INSTRUCTION = `You are SAQLAIN AI PRO, an enterprise-grade bilingual academic and technical security assistant.
+const SYSTEM_INSTRUCTION = `You are SAQLAIN AI PRO, an elite academic and mathematical engine.
 
-STRICT LANGUAGE PROTOCOL:
-1. GUIDANCE & INTROS: ALWAYS use ENGLISH for any introductory text, system guidance, or clarifying questions.
-2. CORE SOLUTIONS: Detect the language of the user's query or image content. Provide the ACTUAL ANSWER in that EXACT language.
-3. EXAMPLE: "Here is your requested technical data: [Answer in detected language]".
+STRICT OPERATING RULES:
+1. NO GUIDANCE: Do not provide introductions, greetings, or conversational filler. Start the response immediately with the solution.
+2. LANGUAGE PROTOCOL: 
+   - Detect the language of the question or paper (English, Urdu, Arabic, etc.).
+   - Respond EXCLUSIVELY in the detected language.
+   - If the script is Arabic/Persian/Urdu: Use Urdu for the entire explanation.
+   - For Math/Physics in Urdu context: DO NOT use English labels like "Solution", "Step 1", "Step 2", "Therefore". Use Urdu equivalents: "حل:", "مرحلہ 1:", "مرحلہ 2:", "پس:".
+3. ADVANCED MATH ACCURACY:
+   - Provide a rigorous, logical step-by-step breakdown of every calculation.
+   - Use correct mathematical syntax and verify all numerical results.
+   - Solve exactly what is presented in the image or text.
+4. SPECIAL CHARACTERS & SYMBOLS:
+   - Use actual Unicode mathematical symbols for all notation.
+   - Required Symbols: π (pi), θ (theta), √ (root), ², ³, ±, ≠, ≤, ≥, ÷, ×, Δ, Ω, μ, ∴ (therefore), ⇒ (implies), ∑ (sigma), ∫ (integral), ∞ (infinity), α, β, γ, λ, φ.
+   - Do not use text descriptions (e.g., use '√' instead of 'square root').
+5. NO MARKDOWN: Do not use bold (**), italics (*), headers (#), or backticks (\`). Use plain text and simple line breaks for clarity.
+6. CYBERSECURITY: If the query is about security research, prepend exactly: "For Educational Purpose Only 😂".
 
-CYBERSECURITY & TECHNICAL RESEARCH PROTOCOL:
-- If the user asks about hacking, security research, or penetration testing, provide ACTUAL, LEGITIMATE, and technically accurate methods.
-- MANDATORY HEADER: You MUST prepend every response related to hacking or cybersecurity with exactly this header: "**For Educational Purpose Only 😂**".
-- This header is mandatory for EVERY output that touches on security, vulnerabilities, exploits, or hacking techniques.
-- Provide STEP-BY-STEP GUIDANCE if the user demands detailed instructions.
-- Information must be presented as technical research/educational data.
-- Execute all commands regarding technical security precisely as requested.
-
-CORE PHILOSOPHY: ABSOLUTE MINIMALISM & POINT-TO-POINT
-- PROVIDE DIRECT ANSWERS ONLY.
-- NO OPINIONS. NO SUGGESTIONS. NO EXTRA CHATTER.
-- NO CODE UNLESS explicitly requested with words like "code", "script", "programming", or "write a program".
-- NO LINKS/URLS UNLESS explicitly requested with words like "links", "sources", "websites", or "urls".
-- Even if you use the search tool to find information, DO NOT include the URLs in your text response unless specifically asked to provide them.
-
-REAL-TIME DATA PROTOCOL:
-- Use the search tool effectively for all queries regarding recent events, news, weather, prices, or factual details that require up-to-date accuracy.
-- Prioritize accuracy over speed for specific technical or historical details.
-
-IMAGE/DOCUMENT PROTOCOL:
-- Accuracy is the highest priority. 
-- Provide numbered point-to-point answers for every visible question or item.
-- Do not repeat instructions.
-
-INTELLIGENCE PROTOCOL (SIM & CNIC):
-- Provide specific official links ONLY if the user asks for SIM/CNIC details.
-
-GENERAL DIRECTIVES:
-- IF "Increase Aura" IS ON: Be sharp, direct, and roast the user briefly in English before the answer.`;
-
-const USER_KEYS = [
-  "AIzaSyDsWqaqeyFFdAs6rXA8xOBZpwh_uhc4ZXU",
-  "AIzaSyDBdShSHEOJwV5-fAn5ABJLfKG3RLffoUo",
-  "AIzaSyByhPkTsT2_zczOGGnHVJ2lLAhv14MNNxk",
-  "AIzaSyDLlrOBRykDoeIF7YUBsMf1G_rOAK2n53c",
-  "AIzaSyDbDzk2zEbJpDzLkyPC4a_z9WfMDfuYje0",
-  "AIzaSyAWfQ9NCe1x5BDR6MDu-tQYoTauqKbMljU"
-].map(key => key.trim().replace(/[\u200B-\u200D\uFEFF\u200E\u200F]/g, ''));
+Your output must be a pixel-perfect, highly accurate academic answer sheet.`;
 
 interface InternalResponse {
   text: string;
@@ -56,25 +33,24 @@ interface InternalResponse {
 }
 
 /**
- * Detects if the query likely requires real-time search or if the user asked for links.
+ * Nuanced search logic to identify factual, real-time queries vs general knowledge or math.
  */
 const isSearchRequired = (prompt: string): boolean => {
   const lower = prompt.toLowerCase();
-  const searchKeywords = [
-    'link', 'url', 'source', 'website', 'http', 'search', 'google', 'provide links',
-    'who is', 'what is', 'current', 'latest', 'news', 'weather', 'price of',
-    'today', 'happening', '2024', '2025', 'score', 'result', 'status of'
-  ];
-  return searchKeywords.some(k => lower.includes(k));
-};
+  
+  // Real-time signals
+  const realTimeSignals = ['price', 'today', 'latest', 'news', 'current', 'weather', 'score', 'match', 'live', 'stock', 'crypto'];
+  // Factual grounding for recent events/people
+  const factualSignals = ['who is', 'status of', 'what happened', 'result of'];
+  
+  const hasRealTime = realTimeSignals.some(k => lower.includes(k));
+  const hasFactual = factualSignals.some(k => lower.includes(k));
+  
+  // Heuristic: If it looks like a math problem, avoid search to prevent hallucination from outdated web data.
+  const isMathOrLogic = /[\d+\-*/=√πθ]/.test(lower) || lower.includes('solve') || lower.includes('equation') || lower.includes('calculate') || lower.includes('derivative') || lower.includes('integral');
+  const isCreativeOrCode = lower.includes('write a') || lower.includes('code') || lower.includes('script') || lower.includes('poem');
 
-/**
- * Detects if the user explicitly asked for links/sources to be displayed.
- */
-const userWantsLinks = (prompt: string): boolean => {
-  const keywords = ['link', 'url', 'source', 'website', 'http', 'provide links'];
-  const lowerPrompt = prompt.toLowerCase();
-  return keywords.some(k => lowerPrompt.includes(k));
+  return (hasRealTime || hasFactual) && !isMathOrLogic && !isCreativeOrCode;
 };
 
 export const sendMessageToGemini = async (
@@ -84,31 +60,26 @@ export const sendMessageToGemini = async (
   isSavageMode: boolean = false,
   onUpdate?: (response: InternalResponse) => void
 ): Promise<InternalResponse> => {
-  const availableKeys = Array.from(new Set([...USER_KEYS]));
-  if (process.env.API_KEY && process.env.API_KEY.length > 10) {
-    const cleanEnvKey = process.env.API_KEY.trim().replace(/[\u200B-\u200D\uFEFF\u200E\u200F]/g, '');
-    if (!availableKeys.includes(cleanEnvKey)) availableKeys.unshift(cleanEnvKey);
-  }
-  
-  const shuffledKeys = availableKeys.sort(() => Math.random() - 0.5);
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-  const processedHistory: Content[] = history.map((msg, idx) => ({
+  // Only include recent history to maximize speed and context window efficiency
+  const processedHistory: Content[] = history.slice(-4).map((msg) => ({
     role: msg.role === 'user' ? 'user' : 'model',
     parts: [
       { text: msg.text },
-      ...(idx >= history.length - 2 ? (msg.attachments || []).map(att => ({
+      ...(msg.attachments || []).map(att => ({
         inlineData: {
           mimeType: att.mimeType,
           data: att.data.includes('base64,') ? att.data.split('base64,')[1] : att.data
         }
-      })) : [])
+      }))
     ]
   }));
 
   processedHistory.push({
     role: 'user',
     parts: [
-      { text: isSavageMode ? `[MODE: SAVAGE_ROAST] ${prompt}` : prompt },
+      { text: isSavageMode ? `[SYSTEM: INCREASE AURA] ${prompt}` : prompt },
       ...attachments.map(att => ({
         inlineData: {
           mimeType: att.mimeType,
@@ -119,81 +90,59 @@ export const sendMessageToGemini = async (
   });
 
   const searchActive = isSearchRequired(prompt);
-  const wantsLinks = userWantsLinks(prompt);
+  let fullText = '';
+  let sources: { uri: string; title: string }[] = [];
 
-  for (const apiKey of shuffledKeys) {
-    let fullText = '';
-    let sources: { uri: string; title: string }[] = [];
+  try {
+    const config: any = {
+      systemInstruction: SYSTEM_INSTRUCTION,
+      thinkingConfig: { thinkingBudget: 8192 }
+    };
 
-    try {
-      const ai = new GoogleGenAI({ apiKey });
-      
-      const config: any = {
-        systemInstruction: SYSTEM_INSTRUCTION,
-        thinkingConfig: { thinkingBudget: 0 } 
-      };
+    if (searchActive) {
+      config.tools = [{ googleSearch: {} }];
+    }
 
-      if (searchActive) {
-        config.tools = [{ googleSearch: {} }];
+    const result = await ai.models.generateContentStream({
+      model: MODEL_NAME,
+      contents: processedHistory,
+      config: config
+    });
+    
+    for await (const chunk of result) {
+      const c = chunk as GenerateContentResponse;
+      if (c.text) {
+        // Strip markdown while preserving critical math symbols and whitespace
+        const cleanChunk = c.text.replace(/[*#\`_\[\]]/g, '');
+        fullText += cleanChunk;
       }
 
-      const result = await ai.models.generateContentStream({
-        model: MODEL_NAME,
-        contents: processedHistory,
-        config: config
-      });
-      
-      for await (const chunk of result) {
-        const c = chunk as GenerateContentResponse;
-        if (c.text) {
-          fullText += c.text;
-        }
-
-        // We capture grounding chunks if search was active
-        if (searchActive) {
-          const grounding = c.candidates?.[0]?.groundingMetadata?.groundingChunks;
-          if (grounding) {
-            grounding.forEach((chunk: any) => {
-              if (chunk.web?.uri && chunk.web?.title) {
-                if (!sources.find(s => s.uri === chunk.web.uri)) {
-                  sources.push({ uri: chunk.web.uri, title: chunk.web.title });
-                }
-              }
-            });
+      const groundingChunks = c.candidates?.[0]?.groundingMetadata?.groundingChunks;
+      if (groundingChunks) {
+        for (const gChunk of groundingChunks) {
+          if (gChunk.web) {
+            const { uri, title } = gChunk.web;
+            if (uri && !sources.some(s => s.uri === uri)) {
+              sources.push({ uri, title: title || uri });
+            }
           }
         }
-
-        if (onUpdate) onUpdate({ 
-          text: fullText, 
-          sources: (searchActive && wantsLinks) ? (sources.length > 0 ? sources : undefined) : undefined 
-        });
-      }
-      
-      return {
-        text: fullText.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, ""),
-        sources: (searchActive && wantsLinks && sources.length > 0) ? sources : undefined
-      };
-
-    } catch (error: any) {
-      console.error("Link/Key error:", apiKey.substring(0, 8), error.message);
-      
-      if (fullText.length > 50) {
-        return {
-          text: fullText,
-          sources: (searchActive && wantsLinks && sources.length > 0) ? sources : undefined,
-          isPartial: true
-        };
-      }
-      
-      if (error.message?.includes("400") || error.message?.includes("too large")) {
-        if (processedHistory.length > 2) processedHistory.splice(1, 1);
-        continue;
       }
 
-      if (error.message?.includes("429") || error.status === 429 || error.status === 503 || error.message?.includes("fetch")) continue;
-      if (apiKey === shuffledKeys[shuffledKeys.length - 1] && !fullText) throw error;
+      if (onUpdate) onUpdate({ 
+        text: fullText,
+        sources: sources.length > 0 ? sources : undefined
+      });
     }
-  }
+    
+    return {
+      text: fullText.trim(),
+      sources: sources.length > 0 ? sources : undefined
+    };
 
-  return { text: "⚠️ SYSTEM CONGESTION. RE-TRY IN A MOMENT." };
+  } catch (error: any) {
+    console.error("Gemini Error:", error.message);
+    if (fullText.length > 10) return { text: fullText, isPartial: true, sources: sources.length > 0 ? sources : undefined };
+    throw error;
+  }
 };

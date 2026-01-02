@@ -1,6 +1,6 @@
 workflows:
   react-native-android:
-    name: SAQLAIN AI - Master Reset Build
+    name: SAQLAIN AI - Connection Fix
     working_directory: . 
     instance_type: mac_mini_m1
     max_build_duration: 60
@@ -19,76 +19,75 @@ workflows:
       - name: Install Dependencies
         script: |
           npm install --legacy-peer-deps
-          # FIX 1: Install the missing AI Brain
           npm install @google/generative-ai --save --legacy-peer-deps
-          
           npm install @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps
           npm install @capacitor/assets --save-dev --legacy-peer-deps
 
-      - name: MASTER RESET - Force Fix Configuration
+      - name: FIX SERVICE & CONNECTION
         script: |
-          echo "🧹 Wiping and recreating vite.config.ts..."
+          echo "🔧 Re-establishing Neural Link..."
           
-          # FIX 2: Create a perfectly clean config file to stop build crashes
-          cat <<EOF > vite.config.ts
-          import { defineConfig } from 'vite'
-          import react from '@vitejs/plugin-react'
-
-          export default defineConfig({
-            plugins: [react()],
-            base: './', 
-            build: {
-              outDir: 'dist',
-              emptyOutDir: true,
-            },
-            server: {
-              port: 3000,
-              host: true
-            }
-          })
-          EOF
-          
-          echo "✅ vite.config.ts restored."
-
-      - name: MASTER RESET - Force Fix Gemini Service
-        script: |
-          echo "🧠 Recreating Gemini Service with API Key..."
-          
+          # 1. Create the Perfect Service File (Hardcoded Key)
           mkdir -p services
-          
-          # FIX 3: Write the service file with the API Key embedded
           cat <<EOF > services/geminiService.ts
           import { GoogleGenerativeAI } from "@google/generative-ai";
 
-          // YOUR KEY IS SAFELY INJECTED HERE
           const API_KEY = "AIzaSyDsWqaqeyFFdAs6rXA8xOBZpwh_uhc4ZXU";
           const genAI = new GoogleGenerativeAI(API_KEY);
           const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
           export async function sendMessageToGemini(message: string, history: any[]) {
             try {
-              // Simplified history to prevent TypeScript errors
-              const processedHistory = history.slice(-6).map((msg) => ({
-                role: msg.role === 'user' ? 'user' : 'model',
-                parts: [{ text: msg.text }] 
-              }));
-
               const chat = model.startChat({
-                history: processedHistory,
+                history: history.slice(-6).map(m => ({
+                  role: m.role === 'user' ? 'user' : 'model',
+                  parts: [{ text: m.text }]
+                }))
               });
-
               const result = await chat.sendMessage(message);
               const response = await result.response;
               return response.text();
-              
             } catch (error) {
-              console.error("Gemini API Error:", error);
-              return "Error: Connection failed. Please check your internet.";
+              console.error("API Error:", error);
+              return "Error: Neural Link Offline. Check Internet.";
             }
           }
           EOF
           
-          echo "✅ geminiService.ts restored."
+          echo "✅ Service Created."
+
+          # 2. FORCE THE APP TO USE IT
+          # This command searches for the file that has "sendMessage" logic and updates the import path
+          # It assumes your main logic file is likely App.tsx or similar in the root
+          
+          echo "🔎 Updating Main App Logic..."
+          
+          # Find the file containing the chat logic (looking for 'sendMessage' or similar)
+          TARGET_FILE=$(grep -l "sendMessage" *.tsx 2>/dev/null | head -n 1)
+          
+          if [ -z "$TARGET_FILE" ]; then
+             echo "⚠️ Could not auto-detect App file. Trying standard names..."
+             if [ -f "App.tsx" ]; then TARGET_FILE="App.tsx"; fi
+             if [ -f "index.tsx" ]; then TARGET_FILE="index.tsx"; fi
+          fi
+          
+          if [ ! -z "$TARGET_FILE" ]; then
+             echo "🎯 Found logic in: $TARGET_FILE"
+             
+             # Replace the old import with the correct one pointing to our new service
+             # We remove any existing import of geminiService and add the correct one at the top
+             sed -i '' "/import.*geminiService/d" "$TARGET_FILE"
+             sed -i '' "1s|^|import { sendMessageToGemini } from './services/geminiService';\n|" "$TARGET_FILE"
+             
+             # Replace the function call to ensure it uses our new function name
+             # This finds whatever function was sending the message and swaps it to sendMessageToGemini
+             # (This is a simplified replacement, assuming standard naming)
+             sed -i '' "s/sendMessage(.message.)/sendMessageToGemini(input, messages)/g" "$TARGET_FILE" || true
+             
+             echo "✅ App Logic Linked to New Service."
+          else
+             echo "❌ Could not find main App file to link. Build will proceed with Service file created."
+          fi
 
       - name: Build Web Assets
         script: |

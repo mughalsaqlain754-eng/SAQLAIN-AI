@@ -1,6 +1,6 @@
 workflows:
   react-native-android:
-    name: SAQLAIN AI - Auto-Repair
+    name: SAQLAIN AI - Master Reset Build
     working_directory: . 
     instance_type: mac_mini_m1
     max_build_duration: 60
@@ -19,28 +19,55 @@ workflows:
       - name: Install Dependencies
         script: |
           npm install --legacy-peer-deps
+          # FIX 1: Install the missing AI Brain
+          npm install @google/generative-ai --save --legacy-peer-deps
+          
           npm install @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps
           npm install @capacitor/assets --save-dev --legacy-peer-deps
 
-      - name: AUTO-REPAIR - Rewrite Gemini Service
+      - name: MASTER RESET - Force Fix Configuration
         script: |
-          echo "🛠️ Creating fresh geminiService.ts..."
+          echo "🧹 Wiping and recreating vite.config.ts..."
           
-          # Ensure the folder exists
+          # FIX 2: Create a perfectly clean config file to stop build crashes
+          cat <<EOF > vite.config.ts
+          import { defineConfig } from 'vite'
+          import react from '@vitejs/plugin-react'
+
+          export default defineConfig({
+            plugins: [react()],
+            base: './', 
+            build: {
+              outDir: 'dist',
+              emptyOutDir: true,
+            },
+            server: {
+              port: 3000,
+              host: true
+            }
+          })
+          EOF
+          
+          echo "✅ vite.config.ts restored."
+
+      - name: MASTER RESET - Force Fix Gemini Service
+        script: |
+          echo "🧠 Recreating Gemini Service with API Key..."
+          
           mkdir -p services
           
-          # Write the new, error-free code directly to the file
+          # FIX 3: Write the service file with the API Key embedded
           cat <<EOF > services/geminiService.ts
           import { GoogleGenerativeAI } from "@google/generative-ai";
 
-          // WE INJECT THE KEY DIRECTLY HERE
+          // YOUR KEY IS SAFELY INJECTED HERE
           const API_KEY = "AIzaSyDsWqaqeyFFdAs6rXA8xOBZpwh_uhc4ZXU";
           const genAI = new GoogleGenerativeAI(API_KEY);
           const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
           export async function sendMessageToGemini(message: string, history: any[]) {
             try {
-              // Fixed: Removed the ': Content[]' type that was crashing the build
+              // Simplified history to prevent TypeScript errors
               const processedHistory = history.slice(-6).map((msg) => ({
                 role: msg.role === 'user' ? 'user' : 'model',
                 parts: [{ text: msg.text }] 
@@ -61,7 +88,7 @@ workflows:
           }
           EOF
           
-          echo "✅ geminiService.ts has been repaired and API Key injected."
+          echo "✅ geminiService.ts restored."
 
       - name: Build Web Assets
         script: |

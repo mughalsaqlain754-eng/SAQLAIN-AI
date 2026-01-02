@@ -1,19 +1,19 @@
 workflows:
   android-release:
     name: SAQLAIN AI Build
-    working_directory: SAQLAIN-AI  # <--- Use this name
-    instance_type: mac_mini_m1
+    # This line tells Codemagic to go INSIDE your project folder first
+    working_directory: SAQLAIN-AI 
+    instance_type: mac_mini_m2
     max_build_duration: 60
     environment:
       groups:
-        - ai_credentials 
+        - ai_credentials # Make sure KEY1 to KEY6 are in this group in the UI
       vars:
         PACKAGE_NAME: "com.saqlainai"
       flutter: stable
     scripts:
       - name: Setup Environment Variables
         script: |
-          # Creates a .env file that pulls your 6 keys from Codemagic UI
           echo "KEY1=$KEY1" > .env
           echo "KEY2=$KEY2" >> .env
           echo "KEY3=$KEY3" >> .env
@@ -22,11 +22,10 @@ workflows:
           echo "KEY6=$KEY6" >> .env
       - name: Get dependencies
         script: |
-          # FIXED: Changed from 'npm install' to 'flutter pub get'
+          # FIXED: Switched from npm to flutter commands
           flutter pub get
       - name: Build Android APK
         script: |
-          # Generates the release APK file
           flutter build apk --release
     artifacts:
       - build/app/outputs/flutter-apk/*.apk

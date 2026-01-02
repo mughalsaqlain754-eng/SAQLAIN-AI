@@ -1,7 +1,7 @@
 workflows:
   android-release:
     name: SAQLAIN AI Build
-    instance_type: linux_x86_64  # USE THIS EXACT NAME
+    instance_type: mac_mini_m1  # USE THIS EXACT NAME
     max_build_duration: 60       # Keep it short to stay free
     environment:
       groups:

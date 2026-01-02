@@ -1,11 +1,11 @@
 workflows:
   android-release:
     name: SAQLAIN AI Build
-    instance_type: mac_mini_m1  # FIXED: Matches your billing/trial plan
+    instance_type: mac_mini_m1 
     max_build_duration: 60
     environment:
       groups:
-        - ai_credentials # Ensure KEY1 to KEY6 are added in this group in the UI
+        - ai_credentials 
       vars:
         PACKAGE_NAME: "com.saqlainai"
       flutter: stable

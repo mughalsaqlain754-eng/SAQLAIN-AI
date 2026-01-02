@@ -1,6 +1,6 @@
 workflows:
   react-native-android:
-    name: SAQLAIN AI Build (Auto-Fixer)
+    name: SAQLAIN AI Build (Final Fix)
     working_directory: . 
     instance_type: mac_mini_m1
     max_build_duration: 60
@@ -22,26 +22,6 @@ workflows:
           npm install --legacy-peer-deps
           npm install @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps
           npm install @capacitor/assets --save-dev --legacy-peer-deps
-
-      - name: AUTO-FIX: Find Entry File & Update HTML
-        script: |
-          echo "Looking for entry file..."
-          # Find the file (checks for main.tsx, main.jsx, main.js, index.tsx, etc.)
-          ENTRY_FILE=$(find src -maxdepth 1 \( -name "main.tsx" -o -name "main.jsx" -o -name "main.js" -o -name "index.tsx" -o -name "index.jsx" -o -name "index.js" \) | head -n 1)
-          
-          if [ -z "$ENTRY_FILE" ]; then
-            echo "CRITICAL ERROR: No entry file found in src folder!"
-            ls -R src
-            exit 1
-          fi
-          
-          echo "FOUND ENTRY FILE: $ENTRY_FILE"
-          
-          # Automatically inject the correct filename into index.html
-          # This replaces src="/src/..." with the real file we found
-          sed -i '' "s|src=\"/src/.*\"|src=\"/$ENTRY_FILE\"|" index.html
-          
-          echo "Successfully updated index.html to use /$ENTRY_FILE"
 
       - name: Build Web Assets
         script: |

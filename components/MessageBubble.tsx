@@ -75,8 +75,15 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isStreaming = fa
       <div className={`flex max-w-[85%] lg:max-w-[75%] ${isUser ? 'flex-row-reverse' : 'flex-row'} items-start gap-3`}>
         
         {!isUser && (
-          <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center shrink-0 mt-1 shadow-[0_0_10px_rgba(77,124,255,0.3)] border border-accent/20">
-             <RobotIcon />
+          <div className="relative shrink-0 mt-1">
+            <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center shadow-[0_0_10px_rgba(77,124,255,0.3)] border border-accent/20">
+               <RobotIcon />
+            </div>
+            {isStreaming && (
+              <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-background rounded-full flex items-center justify-center p-[2px]">
+                <div className="w-full h-full bg-accent rounded-full animate-pulse shadow-[0_0_5px_rgba(77,124,255,1)]"></div>
+              </div>
+            )}
           </div>
         )}
 

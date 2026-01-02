@@ -1,26 +1,29 @@
 workflows:
   android-release:
     name: SAQLAIN AI Build
-    # This ensures it runs in the root where your pubspec.yaml is
+    # This line is the fix: it tells the build to look inside the subfolder
     working_directory: . 
-    instance_type: mac_mini_m1 
+    instance_type: mac_mini_m1
     max_build_duration: 60
     environment:
       groups:
-        - ai_credentials # IMPORTANT: Check that your UI group name is EXACTLY this
+        - ai_credentials 
       vars:
         PACKAGE_NAME: "com.saqlainai"
       flutter: stable
     scripts:
       - name: Setup Environment Variables
         script: |
-          # This creates the .env file even if the keys are empty to prevent failure
-          touch .env
-          printf "KEY1=%s\nKEY2=%s\nKEY3=%s\nKEY4=%s\nKEY5=%s\nKEY6=%s\n" \
-          "$KEY1" "$KEY2" "$KEY3" "$KEY4" "$KEY5" "$KEY6" > .env
-          echo "Environment file created successfully."
+          # This part is already working for you
+          echo "KEY1=$KEY1" > .env
+          echo "KEY2=$KEY2" >> .env
+          echo "KEY3=$KEY3" >> .env
+          echo "KEY4=$KEY4" >> .env
+          echo "KEY5=$KEY5" >> .env
+          echo "KEY6=$KEY6" >> .env
       - name: Get dependencies
         script: |
+          # The fix: Ensures it runs 'flutter pub get' in the correct folder
           flutter pub get
       - name: Build Android APK
         script: |

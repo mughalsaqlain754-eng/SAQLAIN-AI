@@ -1,30 +1,31 @@
 workflows:
   react-native-android:
     name: SAQLAIN AI APK Build
-    # This tells the machine to look exactly where the codemagic.yaml is
     working_directory: . 
     instance_type: mac_mini_m1
     max_build_duration: 60
     environment:
       groups:
-        - ai_credentials # Make sure KEY1 to KEY6 are in this group in the UI
+        - ai_credentials # Ensure KEY1-KEY6 are in this group in Codemagic UI
       vars:
         PACKAGE_NAME: "com.saqlainai"
       node: latest
     scripts:
       - name: Setup Environment Variables
         script: |
-          # This creates the .env file in the root directory
           printf "KEY1=%s\nKEY2=%s\nKEY3=%s\nKEY4=%s\nKEY5=%s\nKEY6=%s\n" \
           "$KEY1" "$KEY2" "$KEY3" "$KEY4" "$KEY5" "$KEY6" > .env
-          echo "Environment variables set."
       - name: Install dependencies
         script: |
-          # Use npm because your project has App.tsx and components
           npm install
       - name: Build Android APK
         script: |
-          # React Native build command
-          cd android && ./gradlew assembleRelease
+          # THE FIX: This command checks if 'android' exists, then builds
+          if [ -d "android" ]; then
+            cd android && ./gradlew assembleRelease
+          else
+            echo "ERROR: 'android' folder not found. Check your GitHub files!"
+            exit 1
+          fi
     artifacts:
-      - android/app/build/outputs/apk/release/*.apk
+      - "**/release/*.apk"

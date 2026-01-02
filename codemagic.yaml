@@ -1,6 +1,6 @@
 workflows:
   react-native-android:
-    name: SAQLAIN AI - Final Fix
+    name: SAQLAIN AI - Auto-Repair
     working_directory: . 
     instance_type: mac_mini_m1
     max_build_duration: 60
@@ -22,27 +22,46 @@ workflows:
           npm install @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps
           npm install @capacitor/assets --save-dev --legacy-peer-deps
 
-      - name: SURGEON FIX - Inject API Key (Root Scan)
+      - name: AUTO-REPAIR - Rewrite Gemini Service
         script: |
-          echo "🔎 Scanning ROOT folder for code..."
+          echo "🛠️ Creating fresh geminiService.ts..."
           
-          # Your Real API Key
-          REAL_KEY="AIzaSyDsWqaqeyFFdAs6rXA8xOBZpwh_uhc4ZXU"
+          # Ensure the folder exists
+          mkdir -p services
           
-          # 1. Force-feed the key into the Google AI setup function
-          # We search the current folder (.) but ignore junk folders
-          grep -rl --exclude-dir={node_modules,android,dist,.git} "new GoogleGenerativeAI" . | xargs sed -i '' "s|new GoogleGenerativeAI(.*)|new GoogleGenerativeAI(\"$REAL_KEY\")|g"
-          
-          # 2. Force-feed the key into any 'apiKey:' fields
-          grep -rl --exclude-dir={node_modules,android,dist,.git} "apiKey:" . | xargs sed -i '' "s|apiKey:.*|apiKey: \"$REAL_KEY\",|g"
-          
-          # 3. Replace any process.env variables with the real key
-          grep -rl --exclude-dir={node_modules,android,dist,.git} "process.env.GEMINI_API_KEY" . | xargs sed -i '' "s|process.env.GEMINI_API_KEY|\"$REAL_KEY\"|g"
-          
-          # 4. Replace any VITE variables with the real key
-          grep -rl --exclude-dir={node_modules,android,dist,.git} "import.meta.env.VITE_GEMINI_API_KEY" . | xargs sed -i '' "s|import.meta.env.VITE_GEMINI_API_KEY|\"$REAL_KEY\"|g"
+          # Write the new, error-free code directly to the file
+          cat <<EOF > services/geminiService.ts
+          import { GoogleGenerativeAI } from "@google/generative-ai";
 
-          echo "✅ Key Injection Complete."
+          // WE INJECT THE KEY DIRECTLY HERE
+          const API_KEY = "AIzaSyDsWqaqeyFFdAs6rXA8xOBZpwh_uhc4ZXU";
+          const genAI = new GoogleGenerativeAI(API_KEY);
+          const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
+          export async function sendMessageToGemini(message: string, history: any[]) {
+            try {
+              // Fixed: Removed the ': Content[]' type that was crashing the build
+              const processedHistory = history.slice(-6).map((msg) => ({
+                role: msg.role === 'user' ? 'user' : 'model',
+                parts: [{ text: msg.text }] 
+              }));
+
+              const chat = model.startChat({
+                history: processedHistory,
+              });
+
+              const result = await chat.sendMessage(message);
+              const response = await result.response;
+              return response.text();
+              
+            } catch (error) {
+              console.error("Gemini API Error:", error);
+              return "Error: Connection failed. Please check your internet.";
+            }
+          }
+          EOF
+          
+          echo "✅ geminiService.ts has been repaired and API Key injected."
 
       - name: Build Web Assets
         script: |

@@ -1,20 +1,21 @@
 workflows:
   android-release:
     name: SAQLAIN AI Build
-    # This line tells Codemagic to go INSIDE your project folder first
-    working_directory: SAQLAIN-AI 
-    instance_type: mac_mini_m2
+    working_directory: SAQLAIN-AI  # Ensures we are in the correct project root
+    instance_type: mac_mini_m1     # Matches your current billing/trial plan
     max_build_duration: 60
     environment:
       groups:
-        - ai_credentials # Make sure KEY1 to KEY6 are in this group in the UI
+        - ai_credentials           # Pulls KEY1 to KEY6 from your UI settings
       vars:
         PACKAGE_NAME: "com.saqlainai"
       flutter: stable
     scripts:
       - name: Setup Environment Variables
         script: |
-          echo "KEY1=$KEY1" > .env
+          # The fix: This ensures the file is created in the current working folder
+          touch .env
+          echo "KEY1=$KEY1" >> .env
           echo "KEY2=$KEY2" >> .env
           echo "KEY3=$KEY3" >> .env
           echo "KEY4=$KEY4" >> .env
@@ -22,10 +23,11 @@ workflows:
           echo "KEY6=$KEY6" >> .env
       - name: Get dependencies
         script: |
-          # FIXED: Switched from npm to flutter commands
+          # Changed to correct Flutter command to avoid 'project root' error
           flutter pub get
       - name: Build Android APK
         script: |
+          # Final step to generate your APK
           flutter build apk --release
     artifacts:
       - build/app/outputs/flutter-apk/*.apk

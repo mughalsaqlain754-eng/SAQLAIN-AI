@@ -1,6 +1,6 @@
 workflows:
   react-native-android:
-    name: SAQLAIN AI - Direct Connect Final
+    name: SAQLAIN AI - Clean Manifest Fix
     working_directory: . 
     instance_type: mac_mini_m1
     max_build_duration: 60
@@ -22,15 +22,13 @@ workflows:
           npm install @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps
           npm install @capacitor/assets --save-dev --legacy-peer-deps
 
-      - name: STEP 1 - Create Raw Connection Service
+      - name: STEP 1 - Create Direct Connection Service
         script: |
           echo "🔥 Creating Direct Connection Service..."
           mkdir -p services
           
-          # We use a pure FETCH command. No libraries. No SDK bugs.
+          # Clean Key - Direct Connect Mode
           cat <<EOF > services/geminiService.ts
-          
-          // YOUR CLEAN KEY
           const API_KEY = "AIzaSyDsWqaqeyFFdAs6rXA8xOBZpwh_uhc4ZXU";
           
           export async function sendMessageToGemini(message: string, history: any[]) {
@@ -62,53 +60,81 @@ workflows:
         script: |
           echo "🔗 Linking App to Direct Connection..."
           
-          # Find the file with the "Neural system failure" text
-          TARGET_FILE=$(grep -r "Neural system failure" . | cut -d: -f1 | head -n 1)
+          # Find target file (ignoring node_modules)
+          TARGET_FILE=$(grep -r --exclude-dir={node_modules,dist,android} "sendMessage" . | cut -d: -f1 | head -n 1)
           
           if [ -z "$TARGET_FILE" ]; then
-             # Backup: Find file with sendMessage
-             TARGET_FILE=$(grep -l "sendMessage" *.tsx 2>/dev/null | head -n 1)
+             if [ -f "App.tsx" ]; then TARGET_FILE="App.tsx"; fi
           fi
 
           if [ ! -z "$TARGET_FILE" ]; then
              echo "Updating $TARGET_FILE..."
-             
-             # 1. Add the new import at the top
+             # Add import
              sed -i '' "1s|^|import { sendMessageToGemini } from './services/geminiService';\n|" "$TARGET_FILE"
-             
-             # 2. FORCE the new function. We replace the old "sendMessage" call with ours.
-             # This command looks for where you call the function and swaps it.
+             # Swap function
              sed -i '' "s/sendMessage(.*)/sendMessageToGemini(input, messages)/g" "$TARGET_FILE" || true
-             
              echo "✅ App Logic Updated."
-          else
-             echo "⚠️ Could not auto-link. Build continuing with service file created."
           fi
 
       - name: Build Web Assets
         script: |
           npm run build
 
-      - name: STEP 3 - Sync & Enforce Permissions
+      - name: STEP 3 - Sync & Write Perfect Manifest
         script: |
           rm -rf android
           npx cap init "SAQLAIN AI" "com.saqlainai" --web-dir dist
           npx cap add android
           
-          echo "🔓 Unlocking Android Internet Permissions..."
-          
-          # 1. Allow Cleartext (HTTP) traffic
-          sed -i '' 's/<application/<application android:usesCleartextTraffic="true"/' android/app/src/main/AndroidManifest.xml
-          
-          # 2. Inject INTERNET PERMISSION (The missing link!)
-          sed -i '' 's/<manifest/<manifest xmlns:android="http:\/\/schemas.android.com\/apk\/res\/android"/' android/app/src/main/AndroidManifest.xml
-          sed -i '' '/<application/i \
-          <uses-permission android:name="android.permission.INTERNET" /> \
-          ' android/app/src/main/AndroidManifest.xml
-          
           if [ -f "assets/icon.png" ]; then
             npx capacitor-assets generate android
           fi
+          
+          echo "📝 Writing PERFECT AndroidManifest.xml..."
+          
+          # We overwrite the broken file with a 100% correct one
+          cat <<EOF > android/app/src/main/AndroidManifest.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+          
+              <uses-permission android:name="android.permission.INTERNET" />
+          
+              <application
+                  android:allowBackup="true"
+                  android:icon="@mipmap/ic_launcher"
+                  android:label="@string/app_name"
+                  android:roundIcon="@mipmap/ic_launcher_round"
+                  android:supportsRtl="true"
+                  android:theme="@style/AppTheme"
+                  android:usesCleartextTraffic="true">
+          
+                  <activity
+                      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
+                      android:name="com.saqlainai.MainActivity"
+                      android:label="@string/title_activity_main"
+                      android:theme="@style/AppTheme.NoActionBarLaunch"
+                      android:launchMode="singleTask"
+                      android:exported="true">
+          
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+          
+                  </activity>
+          
+                  <provider
+                      android:name="androidx.core.content.FileProvider"
+                      android:authorities="\${applicationId}.fileprovider"
+                      android:exported="false"
+                      android:grantUriPermissions="true">
+                      <meta-data
+                          android:name="android.support.FILE_PROVIDER_PATHS"
+                          android:resource="@xml/file_paths" />
+                  </provider>
+              </application>
+          </manifest>
+          EOF
           
           npx cap sync android
 

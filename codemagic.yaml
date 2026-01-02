@@ -1,21 +1,22 @@
 workflows:
   android-release:
     name: SAQLAIN AI Build
-    working_directory: SAQLAIN-AI  # Ensures we are in the correct project root
-    instance_type: mac_mini_m1     # Matches your current billing/trial plan
+    # Ensure this name matches the folder name in your GitHub exactly
+    working_directory: SAQLAIN-AI 
+    instance_type: mac_mini_m2
     max_build_duration: 60
     environment:
       groups:
-        - ai_credentials           # Pulls KEY1 to KEY6 from your UI settings
+        - ai_credentials
       vars:
         PACKAGE_NAME: "com.saqlainai"
       flutter: stable
     scripts:
       - name: Setup Environment Variables
         script: |
-          # The fix: This ensures the file is created in the current working folder
-          touch .env
-          echo "KEY1=$KEY1" >> .env
+          # Use the absolute build directory path to avoid 'not found' errors
+          cd $FCI_BUILD_DIR/SAQLAIN-AI
+          echo "KEY1=$KEY1" > .env
           echo "KEY2=$KEY2" >> .env
           echo "KEY3=$KEY3" >> .env
           echo "KEY4=$KEY4" >> .env
@@ -23,11 +24,11 @@ workflows:
           echo "KEY6=$KEY6" >> .env
       - name: Get dependencies
         script: |
-          # Changed to correct Flutter command to avoid 'project root' error
+          cd $FCI_BUILD_DIR/SAQLAIN-AI
           flutter pub get
       - name: Build Android APK
         script: |
-          # Final step to generate your APK
+          cd $FCI_BUILD_DIR/SAQLAIN-AI
           flutter build apk --release
     artifacts:
-      - build/app/outputs/flutter-apk/*.apk
+      - SAQLAIN-AI/build/app/outputs/flutter-apk/*.apk

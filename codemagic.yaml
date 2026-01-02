@@ -1,35 +1,30 @@
 workflows:
-  android-release:
-    name: SAQLAIN AI Build
-    # This must match the folder name in your GitHub that contains pubspec.yaml
+  react-native-android:
+    name: SAQLAIN AI APK Build
+    # This tells the machine to look exactly where the codemagic.yaml is
     working_directory: . 
     instance_type: mac_mini_m1
     max_build_duration: 60
     environment:
       groups:
-        - ai_credentials # Ensure your 6 keys are in this group in the UI
+        - ai_credentials # Make sure KEY1 to KEY6 are in this group in the UI
       vars:
         PACKAGE_NAME: "com.saqlainai"
-      flutter: stable
+      node: latest
     scripts:
       - name: Setup Environment Variables
         script: |
-          # The Fix: We force the creation of the .env file in the current directory
-          # and ensure it doesn't fail if variables are empty
-          touch .env
-          echo "KEY1=$KEY1" >> .env
-          echo "KEY2=$KEY2" >> .env
-          echo "KEY3=$KEY3" >> .env
-          echo "KEY4=$KEY4" >> .env
-          echo "KEY5=$KEY5" >> .env
-          echo "KEY6=$KEY6" >> .env
-          echo "Environment file created."
-      - name: Get dependencies
+          # This creates the .env file in the root directory
+          printf "KEY1=%s\nKEY2=%s\nKEY3=%s\nKEY4=%s\nKEY5=%s\nKEY6=%s\n" \
+          "$KEY1" "$KEY2" "$KEY3" "$KEY4" "$KEY5" "$KEY6" > .env
+          echo "Environment variables set."
+      - name: Install dependencies
         script: |
-          # This command will now work because we are in the correct root
-          flutter pub get
+          # Use npm because your project has App.tsx and components
+          npm install
       - name: Build Android APK
         script: |
-          flutter build apk --release
+          # React Native build command
+          cd android && ./gradlew assembleRelease
     artifacts:
-      - build/app/outputs/flutter-apk/*.apk
+      - android/app/build/outputs/apk/release/*.apk

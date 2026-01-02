@@ -28,7 +28,7 @@ workflows:
           rm -rf android
           npx cap init "SAQLAIN AI" "com.saqlainai" --web-dir dist
           npx cap add android
-          # THE NEW FIX: Enabling Network & Cleartext Permissions
+          # THE FIX: This command enables Cleartext and Internet Permissions in the Manifest
           sed -i '' 's/<application/<application android:usesCleartextTraffic="true"/' android/app/src/main/AndroidManifest.xml
           npx cap sync android
       - name: Build Android Debug APK

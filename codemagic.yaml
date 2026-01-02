@@ -1,6 +1,6 @@
 workflows:
   react-native-android:
-    name: SAQLAIN AI - Brute Force Fix
+    name: SAQLAIN AI - Final Brute Force
     working_directory: . 
     instance_type: mac_mini_m1
     max_build_duration: 60
@@ -22,29 +22,26 @@ workflows:
           npm install @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps
           npm install @capacitor/assets --save-dev --legacy-peer-deps
 
-      - name: BRUTE FORCE - Inject API Key
+      - name: BRUTE FORCE - Inject API Key (Root Scan)
         script: |
-          echo "🔎 Scanning files..."
+          echo "🔎 Scanning ALL folders for code..."
           
-          # Your Real Key
           REAL_KEY="AIzaSyDsWqaqeyFFdAs6rXA8xOBZpwh_uhc4ZXU"
           
-          # Strategy 1: Find 'new GoogleGenerativeAI(...)' and force the key
-          # This works if you are using the standard SDK
-          grep -rl "new GoogleGenerativeAI" src | xargs sed -i '' "s|new GoogleGenerativeAI(.*)|new GoogleGenerativeAI(\"$REAL_KEY\")|g"
+          # 1. Replace 'new GoogleGenerativeAI(...)' in ANY file in the root
+          # We exclude node_modules to make it fast
+          grep -rl --exclude-dir={node_modules,android,dist,.git} "new GoogleGenerativeAI" . | xargs sed -i '' "s|new GoogleGenerativeAI(.*)|new GoogleGenerativeAI(\"$REAL_KEY\")|g"
           
-          # Strategy 2: Find 'apiKey: ...' (Common in new SDKs) and force the key
-          # We are careful to only target lines with 'apiKey:' inside src
-          grep -rl "apiKey:" src | xargs sed -i '' "s|apiKey:.*|apiKey: \"$REAL_KEY\",|g"
+          # 2. Replace 'apiKey: ...' in ANY file
+          grep -rl --exclude-dir={node_modules,android,dist,.git} "apiKey:" . | xargs sed -i '' "s|apiKey:.*|apiKey: \"$REAL_KEY\",|g"
           
-          # Strategy 3: Find common placeholders and destroy them
-          grep -rl "YOUR_API_KEY" src | xargs sed -i '' "s|YOUR_API_KEY|$REAL_KEY|g"
+          # 3. Replace 'process.env.GEMINI_API_KEY' (The variable approach)
+          grep -rl --exclude-dir={node_modules,android,dist,.git} "process.env.GEMINI_API_KEY" . | xargs sed -i '' "s|process.env.GEMINI_API_KEY|\"$REAL_KEY\"|g"
           
-          echo "✅ Injection attempts complete."
-          
-          # DEBUG: List files so we know where the code lives if this fails
-          echo "📂 File Structure:"
-          find src -maxdepth 3
+          # 4. Replace 'import.meta.env.VITE_GEMINI_API_KEY'
+          grep -rl --exclude-dir={node_modules,android,dist,.git} "import.meta.env.VITE_GEMINI_API_KEY" . | xargs sed -i '' "s|import.meta.env.VITE_GEMINI_API_KEY|\"$REAL_KEY\"|g"
+
+          echo "✅ Injection Complete. Key planted in root files."
 
       - name: Build Web Assets
         script: |

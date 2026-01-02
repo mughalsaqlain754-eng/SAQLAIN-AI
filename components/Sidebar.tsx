@@ -7,6 +7,7 @@ interface SidebarProps {
   onNewChat: () => void;
   history?: ChatSession[];
   onLoadChat?: (session: ChatSession) => void;
+  onDeleteChat?: (chatId: string) => void;
   activeChatId?: string | null;
   isSavageMode: boolean;
   onToggleSavageMode: (value: boolean) => void;
@@ -22,12 +23,19 @@ const RobotIcon = () => (
     </svg>
 );
 
+const TrashIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 -960 960 960" width="18" fill="currentColor">
+        <path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/>
+    </svg>
+);
+
 const Sidebar: React.FC<SidebarProps> = ({ 
     isOpen, 
     onClose, 
     onNewChat, 
     history = [], 
     onLoadChat, 
+    onDeleteChat,
     activeChatId,
     isSavageMode,
     onToggleSavageMode
@@ -64,28 +72,53 @@ const Sidebar: React.FC<SidebarProps> = ({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 custom-scrollbar">
-            <div className="px-2 py-2 text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-4">Instance History</div>
+        <div className="flex-1 overflow-y-auto px-2 custom-scrollbar">
+            <div className="px-4 py-2 text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-2">History Archive</div>
             
             <div className="space-y-1">
-                {history.map((session) => (
-                    <div 
-                        key={session.id}
-                        onClick={() => onLoadChat && onLoadChat(session)}
-                        className={`group flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer text-sm transition-all border ${
-                            activeChatId === session.id 
-                                ? 'bg-white/5 border-accent/30 text-accent font-medium' 
-                                : 'hover:bg-white/5 border-transparent text-textSecondary'
-                        }`}
-                    >
-                        <svg className="w-4 h-4 shrink-0 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
-                        <span className="truncate flex-1">{session.title}</span>
+                {history.length === 0 ? (
+                    <div className="px-4 py-8 text-center">
+                        <p className="text-[10px] text-gray-600 uppercase tracking-widest">No previous sessions found</p>
                     </div>
-                ))}
+                ) : (
+                    history.map((session) => (
+                        <div 
+                            key={session.id}
+                            className={`group flex items-center gap-2 px-2 py-1 rounded-xl transition-all ${
+                                activeChatId === session.id 
+                                    ? 'bg-white/5' 
+                                    : 'hover:bg-white/5'
+                            }`}
+                        >
+                            <div 
+                                onClick={() => onLoadChat && onLoadChat(session)}
+                                className={`flex-1 flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-sm overflow-hidden ${
+                                    activeChatId === session.id 
+                                        ? 'text-accent font-medium' 
+                                        : 'text-textSecondary hover:text-textPrimary'
+                                }`}
+                            >
+                                <svg className={`w-4 h-4 shrink-0 transition-opacity ${activeChatId === session.id ? 'opacity-100' : 'opacity-40'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+                                <span className="truncate">{session.title}</span>
+                            </div>
+                            
+                            <button 
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onDeleteChat && onDeleteChat(session.id);
+                                }}
+                                className="p-2 text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all rounded-lg hover:bg-red-400/10"
+                                title="Delete Session"
+                            >
+                                <TrashIcon />
+                            </button>
+                        </div>
+                    ))
+                )}
             </div>
         </div>
 
-        <div className="p-6 border-t border-white/5 space-y-6">
+        <div className="p-6 border-t border-white/5 space-y-6 bg-surface/50">
              {/* Increase Aura Toggle */}
              <div className="bg-surfaceLight/50 p-4 rounded-2xl border border-white/5">
                 <div className="flex items-center justify-between mb-2">

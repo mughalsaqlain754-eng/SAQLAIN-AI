@@ -37,9 +37,17 @@ const ShieldCheck = () => (
     </svg>
 );
 
+const isRTL = (text: string): boolean => {
+  const rtlChars = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF\u0590-\u05FF]/;
+  return rtlChars.test(text);
+};
+
 const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isStreaming = false }) => {
   const isUser = message.role === 'user';
   const [copied, setCopied] = useState(false);
+  
+  const textIsRTL = isRTL(message.text);
+  
   const isIntelligenceReport = 
     message.text.includes('INTELLIGENCE REPORT') || 
     message.text.includes('SIM DATA') || 
@@ -53,9 +61,14 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isStreaming = fa
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Extract confidence if present
   const confidenceMatch = message.text.match(/SUCCESS RATE.*?:?\s*(\d+)%/i);
   const confidenceValue = confidenceMatch ? parseInt(confidenceMatch[1]) : null;
+
+  // Only show sources if the message text contains evidence of links or sources being requested/provided
+  const showGrounding = message.sources && message.sources.length > 0 && 
+    (message.text.toLowerCase().includes('http') || 
+     message.text.toLowerCase().includes('source') || 
+     message.text.toLowerCase().includes('link'));
 
   return (
     <div className={`flex w-full mb-8 animate-slide-up ${isUser ? 'justify-end' : 'justify-start'}`}>
@@ -77,16 +90,15 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isStreaming = fa
                         : 'bg-transparent text-textPrimary'
                 }`}
             >
-                {/* Confidence Badge for Reports */}
                 {isIntelligenceReport && confidenceValue !== null && (
-                    <div className="absolute -top-3 right-4 flex items-center gap-1.5 px-3 py-1 bg-background border border-accent/30 rounded-full shadow-lg z-10">
+                    <div className={`absolute -top-3 ${textIsRTL ? 'left-4' : 'right-4'} flex items-center gap-1.5 px-3 py-1 bg-background border border-accent/30 rounded-full shadow-lg z-10`}>
                         <div className={`w-1.5 h-1.5 rounded-full ${confidenceValue > 80 ? 'bg-emerald-500' : 'bg-amber-500'} animate-pulse`}></div>
                         <span className="text-[9px] font-bold text-textPrimary font-mono uppercase tracking-widest">Confidence: {confidenceValue}%</span>
                     </div>
                 )}
 
                 {message.attachments && message.attachments.length > 0 && (
-                <div className={`mb-3 flex flex-wrap gap-2 ${isUser ? 'justify-end' : ''}`}>
+                <div className={`mb-3 flex flex-wrap gap-2 ${isUser ? 'justify-end' : ''}`} dir="ltr">
                     {message.attachments.map((att, idx) => (
                     att.mimeType.startsWith('image/') ? (
                         <img 
@@ -111,7 +123,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isStreaming = fa
                         code({node, inline, className, children, ...props}: any) {
                             const match = /language-(\w+)/.exec(className || '')
                             return !inline && match ? (
-                            <div className="relative group my-6 overflow-hidden rounded-xl border border-white/10">
+                            <div className="relative group my-6 overflow-hidden rounded-xl border border-white/10" dir="ltr">
                                 <div className="flex items-center justify-between bg-[#1a1a1a] px-4 py-2 text-[10px] uppercase tracking-widest text-gray-400 font-mono">
                                     <span>{match[1]}</span>
                                     <button onClick={() => navigator.clipboard.writeText(String(children))} className="hover:text-accent transition-colors">COPY</button>
@@ -128,7 +140,30 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isStreaming = fa
                             </code>
                             )
                         },
-                        p: ({children}) => <p className="mb-4 last:mb-0">{children}</p>,
+                        p: ({children}) => {
+                            const pText = String(children);
+                            const pIsRTL = isRTL(pText);
+                            return (
+                                <p 
+                                    className={`mb-4 last:mb-0 ${pIsRTL ? 'text-right font-sans' : 'text-left'}`}
+                                    dir={pIsRTL ? 'rtl' : 'ltr'}
+                                >
+                                    {children}
+                                </p>
+                            );
+                        },
+                        li: ({children}) => {
+                            const liText = String(children);
+                            const liIsRTL = isRTL(liText);
+                            return (
+                                <li 
+                                    className={`${liIsRTL ? 'text-right font-sans' : 'text-left'}`}
+                                    dir={liIsRTL ? 'rtl' : 'ltr'}
+                                >
+                                    {children}
+                                </li>
+                            );
+                        },
                         strong: ({children}) => <strong className="text-accent font-bold">{children}</strong>,
                         a: ({href, children}) => <a href={href} target="_blank" className="text-accent hover:underline">{children}</a>
                     }}
@@ -137,18 +172,18 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isStreaming = fa
                 </ReactMarkdown>
                 </div>
 
-                {/* Grounding Sources */}
-                {message.sources && message.sources.length > 0 && (
-                    <div className="mt-5 p-4 rounded-xl bg-[#0d0d0d] border border-white/5 shadow-inner">
+                {/* Grounding Sources - Controlled Visibility */}
+                {showGrounding && (
+                    <div className="mt-5 p-4 rounded-xl bg-[#0d0d0d] border border-white/5 shadow-inner" dir="ltr">
                         <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2">
                                 <ShieldCheck />
-                                <span className="text-[10px] font-bold text-accent uppercase tracking-widest font-mono">Real-Time Intelligence Grounding</span>
+                                <span className="text-[10px] font-bold text-accent uppercase tracking-widest font-mono">Real-Time Intelligence</span>
                             </div>
-                            <span className="text-[9px] text-gray-600 font-mono px-2 py-0.5 rounded-full bg-white/5 border border-white/5">SCAN ENABLED</span>
+                            <span className="text-[9px] text-gray-600 font-mono px-2 py-0.5 rounded-full bg-white/5 border border-white/5">VERIFIED</span>
                         </div>
                         <div className="grid grid-cols-1 gap-1.5">
-                            {message.sources.map((source, idx) => (
+                            {message.sources!.map((source, idx) => (
                                 <a 
                                     key={idx} 
                                     href={source.uri} 
@@ -166,7 +201,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isStreaming = fa
                 )}
 
                 {!isUser && !message.isError && !isStreaming && (
-                <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
+                <div className={`mt-4 pt-4 border-t border-white/5 flex items-center justify-between ${textIsRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                     <button 
                         onClick={handleCopy}
                         className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surfaceLight border border-white/5 text-[10px] font-mono tracking-widest text-gray-400 hover:text-accent hover:border-accent/30 transition-all uppercase group"
@@ -174,10 +209,10 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isStreaming = fa
                         {copied ? <CheckIcon /> : <CopyIcon />}
                         <span>{copied ? 'Copied' : 'Copy'}</span>
                     </button>
-                    {message.sources && (
+                    {showGrounding && (
                         <div className="flex items-center gap-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]"></span>
-                            <span className="text-[9px] font-mono text-gray-500 uppercase tracking-widest">{message.sources.length} Intelligence Points</span>
+                            <span className="text-[9px] font-mono text-gray-500 uppercase tracking-widest">{message.sources!.length} Data Points</span>
                         </div>
                     )}
                 </div>

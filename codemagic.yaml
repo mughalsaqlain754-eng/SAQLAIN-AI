@@ -1,6 +1,6 @@
 workflows:
   react-native-android:
-    name: SAQLAIN AI - Surgical Fix
+    name: SAQLAIN AI - Total Turbo Replacement
     working_directory: . 
     instance_type: mac_mini_m1
     max_build_duration: 60
@@ -21,39 +21,115 @@ workflows:
           npm install --legacy-peer-deps
           npm install @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps
           npm install @capacitor/assets --save-dev --legacy-peer-deps
+          # Ensure React is installed
+          npm install react react-dom --legacy-peer-deps
+          npm install @vitejs/plugin-react --save-dev --legacy-peer-deps
 
-      - name: SURGICAL OPERATION - Inject Logic Directly
+      - name: NUCLEAR OPTION - Overwrite App.tsx with Turbo Mode
         script: |
-          echo "🏥 Starting Surgery..."
+          echo "☢️ STARTING TOTAL REPLACEMENT (TURBO EDITION)..."
           
-          # 1. FIND THE PATIENT (The file with the error)
-          TARGET_FILE=$(grep -r --exclude-dir={node_modules,dist,android} "Neural system failure" . | cut -d: -f1 | head -n 1)
+          mkdir -p src
           
-          if [ -z "$TARGET_FILE" ]; then
-             echo "⚠️ Could not find specific error text. searching for App.tsx..."
-             if [ -f "App.tsx" ]; then TARGET_FILE="App.tsx"; fi
-          fi
+          # We write a COMPLETE Chat App with 6-KEY TURBO LOGIC
+          cat <<EOF > src/App.tsx
+          import { useState } from 'react';
+          import './App.css'; 
+
+          export default function App() {
+            const [input, setInput] = useState("");
+            const [messages, setMessages] = useState<{role: string, text: string}[]>([]);
+            const [loading, setLoading] = useState(false);
+
+            // TURBO MODE: All 6 Keys
+            const API_KEYS = [
+              "AIzaSyDsWqaqeyFFdAs6rXA8xOBZpwh_uhc4ZXU", 
+              "AIzaSyDBdShSHEOJwV5-fAn5ABJLfKG3RLffoUo", 
+              "AIzaSyByhPkTsT2_zczOGGnHVJ2lLAhv14MNNxk", 
+              "AIzaSyDLlrOBRykDoeIF7YUBsMf1G_rOAK2n53c", 
+              "AIzaSyDbDzk2zEbJpDzLkyPC4a_z9WfMDfuYje0", 
+              "AIzaSyAWfQ9NCe1x5BDR6MDu-tQYoTauqKbMljU"
+            ];
+
+            const sendMessage = async () => {
+              if (!input.trim()) return;
+
+              const newMessages = [...messages, { role: "user", text: input }];
+              setMessages(newMessages);
+              setInput("");
+              setLoading(true);
+
+              // 🎲 PICK A RANDOM KEY (Safe & Fast)
+              const randomKey = API_KEYS[Math.floor(Math.random() * API_KEYS.length)];
+
+              try {
+                // DIRECT CONNECTION
+                const response = await fetch(
+                  "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + randomKey,
+                  {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      contents: [{ parts: [{ text: input }] }]
+                    })
+                  }
+                );
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                  throw new Error(data.error?.message || "Google Blocked Request");
+                }
+
+                const botReply = data.candidates[0].content.parts[0].text;
+                setMessages([...newMessages, { role: "model", text: botReply }]);
+
+              } catch (error: any) {
+                console.error("Error:", error);
+                setMessages([...newMessages, { role: "model", text: "Error: " + error.message }]);
+              } finally {
+                setLoading(false);
+              }
+            };
+
+            return (
+              <div style={{ padding: 20, height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#121212', color: 'white' }}>
+                <h2 style={{ textAlign: 'center' }}>SAQLAIN AI</h2>
+                <div style={{ flex: 1, overflowY: 'auto', marginBottom: 20 }}>
+                  {messages.map((msg, index) => (
+                    <div key={index} style={{ 
+                      textAlign: msg.role === 'user' ? 'right' : 'left',
+                      margin: '10px 0' 
+                    }}>
+                      <span style={{ 
+                        backgroundColor: msg.role === 'user' ? '#007bff' : '#333',
+                        padding: '10px 15px', 
+                        borderRadius: 15,
+                        display: 'inline-block',
+                        maxWidth: '80%'
+                      }}>
+                        {msg.text}
+                      </span>
+                    </div>
+                  ))}
+                  {loading && <div>Thinking...</div>}
+                </div>
+                <div style={{ display: 'flex' }}>
+                  <input 
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                    placeholder="Type a message..."
+                    style={{ flex: 1, padding: 15, borderRadius: 25, border: 'none', marginRight: 10 }}
+                  />
+                  <button onClick={sendMessage} style={{ padding: '15px 25px', borderRadius: 25, border: 'none', backgroundColor: '#007bff', color: 'white' }}>Send</button>
+                </div>
+              </div>
+            );
+          }
+          EOF
           
-          echo "✅ OPERATING ON: $TARGET_FILE"
-          
-          if [ ! -z "$TARGET_FILE" ]; then
-             # 2. PROOF OF LIFE: Change the error message
-             # If you see "Neural Link Reset" in the app, you know this script worked!
-             sed -i '' "s/Neural system failure/Neural Link Reset - Retrying.../g" "$TARGET_FILE"
-             
-             # 3. INJECT THE KEY (Hardcode it everywhere)
-             REAL_KEY="AIzaSyDsWqaqeyFFdAs6rXA8xOBZpwh_uhc4ZXU"
-             sed -i '' "s/const API_KEY = .*/const API_KEY = \"$REAL_KEY\";/g" "$TARGET_FILE"
-             sed -i '' "s/new GoogleGenerativeAI(.*)/new GoogleGenerativeAI(\"$REAL_KEY\")/g" "$TARGET_FILE"
-             
-             # 4. DIRECT INJECTION (Backup Plan)
-             # If the app uses a variable for the key, we force-set it at the top of the file
-             sed -i '' "1s|^|const FIXED_API_KEY = \"$REAL_KEY\";\n|" "$TARGET_FILE"
-             
-             echo "✅ Surgery Complete. Error message changed and Key Injected."
-          else
-             echo "❌ CRITICAL: Could not find the App file. Proceeding with clean manifest only."
-          fi
+          echo "✅ App.tsx replaced with TURBO MODE."
 
       - name: Build Web Assets
         script: |
@@ -64,10 +140,6 @@ workflows:
           rm -rf android
           npx cap init "SAQLAIN AI" "com.saqlainai" --web-dir dist
           npx cap add android
-          
-          if [ -f "assets/icon.png" ]; then
-            npx capacitor-assets generate android
-          fi
           
           echo "📝 Writing PERFECT AndroidManifest.xml..."
           cat <<EOF > android/app/src/main/AndroidManifest.xml

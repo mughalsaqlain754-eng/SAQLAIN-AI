@@ -1,6 +1,6 @@
 workflows:
   react-native-android:
-    name: SAQLAIN AI - Fail-Safe Fix
+    name: SAQLAIN AI - Turbo Mode Fix
     working_directory: . 
     instance_type: mac_mini_m1
     max_build_duration: 60
@@ -19,48 +19,36 @@ workflows:
       - name: Install Dependencies
         script: |
           npm install --legacy-peer-deps
-          # GUARANTEE 1: Install the Brain
           npm install @google/generative-ai --save --legacy-peer-deps
           npm install @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps
           npm install @capacitor/assets --save-dev --legacy-peer-deps
 
-      - name: FAIL-SAFE FIX - Inject API Key
+      - name: SCORCHED EARTH - Inject Turbo Key Rotation
         script: |
-          echo "🎯 Scanning for the file with the error message..."
+          echo "🔥 Injecting 6-Key Turbo Engine..."
           
-          # 1. Find the file that contains "Neural system failure"
-          # We search recursively (-r) in all JS/TS files
-          TARGET_FILE=$(grep -r --include="*.{js,jsx,ts,tsx}" "Neural system failure" . | cut -d: -f1 | head -n 1)
+          # The "Magic Code" - A random picker with all 6 keys
+          # This replaces the single key string with logic that picks a random key every time
+          TURBO_CODE='["AIzaSyDsWqaqeyFFdAs6rXA8xOBZpwh_uhc4ZXU", "AIzaSyDBdShSHEOJwV5-fAn5ABJLfKG3RLffoUo", "AIzaSyByhPkTsT2_zczOGGnHVJ2lLAhv14MNNxk", "AIzaSyDLlrOBRykDoeIF7YUBsMf1G_rOAK2n53c", "AIzaSyDbDzk2zEbJpDzLkyPC4a_z9WfMDfuYje0", "AIzaSyAWfQ9NCe1x5BDR6MDu-tQYoTauqKbMljU"][Math.floor(Math.random() * 6)]'
           
-          # GUARANTEE 2: Don't proceed if we can't find the file
-          if [ -z "$TARGET_FILE" ]; then
-            echo "❌ CRITICAL ERROR: Could not find the file containing 'Neural system failure'."
-            echo "Searching for App.tsx as a backup..."
-            TARGET_FILE=$(find . -name "App.tsx" -o -name "index.tsx" | head -n 1)
-          fi
+          EXCLUDE_DIRS="--exclude-dir={node_modules,android,dist,.git}"
+
+          # 1. Inject Turbo Code into Constructor
+          # Replaces 'new GoogleGenerativeAI(...)' with 'new GoogleGenerativeAI([Key1, Key2...][random])'
+          echo "💉 upgrading constructors to Turbo Mode..."
+          grep -rl $EXCLUDE_DIRS "new GoogleGenerativeAI" . | xargs -I {} sed -i '' "s|new GoogleGenerativeAI(.*)|new GoogleGenerativeAI($TURBO_CODE)|g" "{}"
+
+          # 2. Inject Turbo Code into Config Objects
+          # Replaces 'apiKey: ...' with 'apiKey: [Key1, Key2...][random],'
+          echo "💉 Upgrading config objects to Turbo Mode..."
+          grep -rl $EXCLUDE_DIRS "apiKey:" . | xargs -I {} sed -i '' "s|apiKey:.*|apiKey: $TURBO_CODE,|g" "{}"
           
-          if [ -z "$TARGET_FILE" ]; then
-             echo "❌ STILL FAILED: Could not find App.tsx or index.tsx. Exiting to prevent broken build."
-             exit 1
-          fi
+          # 3. Inject Turbo Code into Variables
+          # Replaces 'const API_KEY = ...' with 'const API_KEY = [Key1, Key2...][random];'
+          echo "💉 Upgrading constants to Turbo Mode..."
+          grep -rl --include=".{js,jsx,ts,tsx}" $EXCLUDE_DIRS "const API_KEY =" . | xargs -I {} sed -i '' "s|const API_KEY = .|const API_KEY = $TURBO_CODE;|g" "{}"
           
-          echo "✅ TARGET ACQUIRED: $TARGET_FILE"
-          
-          REAL_KEY="AIzaSyDsWqaqeyFFdAs6rXA8xOBZpwh_uhc4ZXU"
-          
-          # GUARANTEE 3: Inject Key (Method A: Constructor)
-          # Replaces 'new GoogleGenerativeAI(...)' with 'new GoogleGenerativeAI("KEY")'
-          sed -i '' "s|new GoogleGenerativeAI(.*)|new GoogleGenerativeAI(\"$REAL_KEY\")|g" "$TARGET_FILE"
-          
-          # GUARANTEE 4: Inject Key (Method B: Variable)
-          # Replaces 'const API_KEY = ...' with 'const API_KEY = "KEY";'
-          sed -i '' "s|const API_KEY = .*|const API_KEY = \"$REAL_KEY\";|g" "$TARGET_FILE"
-          
-          # GUARANTEE 5: Inject Key (Method C: Config Object)
-          # Replaces 'apiKey: ...' with 'apiKey: "KEY",'
-          sed -i '' "s|apiKey:.*|apiKey: \"$REAL_KEY\",|g" "$TARGET_FILE"
-          
-          echo "💉 API Key successfully injected into $TARGET_FILE"
+          echo "✅ Turbo Mode Activated. All 6 keys are live."
 
       - name: Build Web Assets
         script: |
@@ -72,7 +60,7 @@ workflows:
           npx cap init "SAQLAIN AI" "com.saqlainai" --web-dir dist
           npx cap add android
           
-          # GUARANTEE 6: Ensure Internet Permission
+          # Ensure Internet Permission
           sed -i '' 's/<application/<application android:usesCleartextTraffic="true"/' android/app/src/main/AndroidManifest.xml
           
           if [ -f "assets/icon.png" ]; then

@@ -2,7 +2,7 @@ workflows:
   android-release-build:
     name: SAQLAIN AI APK Build
     max_build_duration: 120
-    instance_type: linux_x2 # FIXED: Standard free-tier instance
+    instance_type: mac_mini # FIXED: Standard free-tier instance
     environment:
       groups:
         - ai_credentials # Ensure KEY1 to KEY6 are added in this group in the UI

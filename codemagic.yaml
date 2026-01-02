@@ -1,11 +1,11 @@
 workflows:
-  android-release-build:
-    name: SAQLAIN AI APK Build
-    max_build_duration: 120
-    instance_type: mac_mini # FIXED: Standard free-tier instance
+  android-release:
+    name: SAQLAIN AI Build
+    instance_type: linux_x86_64  # USE THIS EXACT NAME
+    max_build_duration: 60       # Keep it short to stay free
     environment:
       groups:
-        - ai_credentials # Ensure KEY1 to KEY6 are added in this group in the UI
+        - ai_credentials
       vars:
         PACKAGE_NAME: "com.saqlainai"
       flutter: stable

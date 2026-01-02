@@ -1,11 +1,11 @@
 workflows:
   android-release:
     name: SAQLAIN AI Build
-    instance_type: mac_mini_m1  # USE THIS EXACT NAME
-    max_build_duration: 60       # Keep it short to stay free
+    instance_type: mac_mini_m1  # FIXED: Matches your billing/trial plan
+    max_build_duration: 60
     environment:
       groups:
-        - ai_credentials
+        - ai_credentials # Ensure KEY1 to KEY6 are added in this group in the UI
       vars:
         PACKAGE_NAME: "com.saqlainai"
       flutter: stable
@@ -21,9 +21,11 @@ workflows:
           echo "KEY6=$KEY6" >> .env
       - name: Get dependencies
         script: |
+          # FIXED: Changed from 'npm install' to 'flutter pub get'
           flutter pub get
       - name: Build Android APK
         script: |
+          # Generates the release APK file
           flutter build apk --release
     artifacts:
       - build/app/outputs/flutter-apk/*.apk

@@ -1,6 +1,6 @@
 workflows:
   react-native-android:
-    name: SAQLAIN AI - Root Fix
+    name: SAQLAIN AI - Final Fix
     working_directory: . 
     instance_type: mac_mini_m1
     max_build_duration: 60
@@ -22,24 +22,27 @@ workflows:
           npm install @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps
           npm install @capacitor/assets --save-dev --legacy-peer-deps
 
-      - name: BRUTE FORCE - Inject API Key (Root Mode)
+      - name: SURGEON FIX - Inject API Key (Root Scan)
         script: |
           echo "🔎 Scanning ROOT folder for code..."
           
+          # Your Real API Key
           REAL_KEY="AIzaSyDsWqaqeyFFdAs6rXA8xOBZpwh_uhc4ZXU"
           
-          # We search '.' (current folder) but ignore node_modules and hidden files
-          
-          # 1. Replace 'new GoogleGenerativeAI(...)'
+          # 1. Force-feed the key into the Google AI setup function
+          # We search the current folder (.) but ignore junk folders
           grep -rl --exclude-dir={node_modules,android,dist,.git} "new GoogleGenerativeAI" . | xargs sed -i '' "s|new GoogleGenerativeAI(.*)|new GoogleGenerativeAI(\"$REAL_KEY\")|g"
           
-          # 2. Replace 'apiKey: ...' 
+          # 2. Force-feed the key into any 'apiKey:' fields
           grep -rl --exclude-dir={node_modules,android,dist,.git} "apiKey:" . | xargs sed -i '' "s|apiKey:.*|apiKey: \"$REAL_KEY\",|g"
           
-          # 3. Replace 'process.env.GEMINI_API_KEY'
+          # 3. Replace any process.env variables with the real key
           grep -rl --exclude-dir={node_modules,android,dist,.git} "process.env.GEMINI_API_KEY" . | xargs sed -i '' "s|process.env.GEMINI_API_KEY|\"$REAL_KEY\"|g"
+          
+          # 4. Replace any VITE variables with the real key
+          grep -rl --exclude-dir={node_modules,android,dist,.git} "import.meta.env.VITE_GEMINI_API_KEY" . | xargs sed -i '' "s|import.meta.env.VITE_GEMINI_API_KEY|\"$REAL_KEY\"|g"
 
-          echo "✅ Injection Complete."
+          echo "✅ Key Injection Complete."
 
       - name: Build Web Assets
         script: |

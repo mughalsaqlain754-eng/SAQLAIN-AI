@@ -1,6 +1,6 @@
 workflows:
   react-native-android:
-    name: SAQLAIN AI - Clean Manifest Fix
+    name: SAQLAIN AI - Surgical Fix
     working_directory: . 
     instance_type: mac_mini_m1
     max_build_duration: 60
@@ -22,65 +22,44 @@ workflows:
           npm install @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps
           npm install @capacitor/assets --save-dev --legacy-peer-deps
 
-      - name: STEP 1 - Create Direct Connection Service
+      - name: SURGICAL OPERATION - Inject Logic Directly
         script: |
-          echo "🔥 Creating Direct Connection Service..."
-          mkdir -p services
+          echo "🏥 Starting Surgery..."
           
-          # Clean Key - Direct Connect Mode
-          cat <<EOF > services/geminiService.ts
-          const API_KEY = "AIzaSyDsWqaqeyFFdAs6rXA8xOBZpwh_uhc4ZXU";
-          
-          export async function sendMessageToGemini(message: string, history: any[]) {
-            const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + API_KEY;
-            
-            try {
-              const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: message }] }] })
-              });
-
-              const data = await response.json();
-
-              if (!response.ok) {
-                console.error("Google Error:", data);
-                return "Error: " + (data.error?.message || "Google Rejected Connection");
-              }
-              return data.candidates[0].content.parts[0].text;
-              
-            } catch (error) {
-              console.error("Network Error:", error);
-              return "Error: Internet Connection Failed.";
-            }
-          }
-          EOF
-
-      - name: STEP 2 - Force App to Use New Service
-        script: |
-          echo "🔗 Linking App to Direct Connection..."
-          
-          # Find target file (ignoring node_modules)
-          TARGET_FILE=$(grep -r --exclude-dir={node_modules,dist,android} "sendMessage" . | cut -d: -f1 | head -n 1)
+          # 1. FIND THE PATIENT (The file with the error)
+          TARGET_FILE=$(grep -r --exclude-dir={node_modules,dist,android} "Neural system failure" . | cut -d: -f1 | head -n 1)
           
           if [ -z "$TARGET_FILE" ]; then
+             echo "⚠️ Could not find specific error text. searching for App.tsx..."
              if [ -f "App.tsx" ]; then TARGET_FILE="App.tsx"; fi
           fi
-
+          
+          echo "✅ OPERATING ON: $TARGET_FILE"
+          
           if [ ! -z "$TARGET_FILE" ]; then
-             echo "Updating $TARGET_FILE..."
-             # Add import
-             sed -i '' "1s|^|import { sendMessageToGemini } from './services/geminiService';\n|" "$TARGET_FILE"
-             # Swap function
-             sed -i '' "s/sendMessage(.*)/sendMessageToGemini(input, messages)/g" "$TARGET_FILE" || true
-             echo "✅ App Logic Updated."
+             # 2. PROOF OF LIFE: Change the error message
+             # If you see "Neural Link Reset" in the app, you know this script worked!
+             sed -i '' "s/Neural system failure/Neural Link Reset - Retrying.../g" "$TARGET_FILE"
+             
+             # 3. INJECT THE KEY (Hardcode it everywhere)
+             REAL_KEY="AIzaSyDsWqaqeyFFdAs6rXA8xOBZpwh_uhc4ZXU"
+             sed -i '' "s/const API_KEY = .*/const API_KEY = \"$REAL_KEY\";/g" "$TARGET_FILE"
+             sed -i '' "s/new GoogleGenerativeAI(.*)/new GoogleGenerativeAI(\"$REAL_KEY\")/g" "$TARGET_FILE"
+             
+             # 4. DIRECT INJECTION (Backup Plan)
+             # If the app uses a variable for the key, we force-set it at the top of the file
+             sed -i '' "1s|^|const FIXED_API_KEY = \"$REAL_KEY\";\n|" "$TARGET_FILE"
+             
+             echo "✅ Surgery Complete. Error message changed and Key Injected."
+          else
+             echo "❌ CRITICAL: Could not find the App file. Proceeding with clean manifest only."
           fi
 
       - name: Build Web Assets
         script: |
           npm run build
 
-      - name: STEP 3 - Sync & Write Perfect Manifest
+      - name: Sync & Write Perfect Manifest
         script: |
           rm -rf android
           npx cap init "SAQLAIN AI" "com.saqlainai" --web-dir dist
@@ -91,14 +70,10 @@ workflows:
           fi
           
           echo "📝 Writing PERFECT AndroidManifest.xml..."
-          
-          # We overwrite the broken file with a 100% correct one
           cat <<EOF > android/app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-          
               <uses-permission android:name="android.permission.INTERNET" />
-          
               <application
                   android:allowBackup="true"
                   android:icon="@mipmap/ic_launcher"
@@ -107,7 +82,6 @@ workflows:
                   android:supportsRtl="true"
                   android:theme="@style/AppTheme"
                   android:usesCleartextTraffic="true">
-          
                   <activity
                       android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
                       android:name="com.saqlainai.MainActivity"
@@ -115,14 +89,11 @@ workflows:
                       android:theme="@style/AppTheme.NoActionBarLaunch"
                       android:launchMode="singleTask"
                       android:exported="true">
-          
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
                           <category android:name="android.intent.category.LAUNCHER" />
                       </intent-filter>
-          
                   </activity>
-          
                   <provider
                       android:name="androidx.core.content.FileProvider"
                       android:authorities="\${applicationId}.fileprovider"

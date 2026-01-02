@@ -6,34 +6,41 @@ workflows:
     max_build_duration: 60
     environment:
       groups:
-        - ai_credentials # Pulls KEY1-KEY6 from your UI
+        - ai_credentials # CRITICAL: MUST MATCH YOUR UI GROUP NAME
       vars:
         PACKAGE_NAME: "com.saqlainai"
+        NODE_OPTIONS: "--max-old-space-size=4096"
       node: latest
     scripts:
       - name: Setup Environment Variables
         script: |
-          # Creates the .env file for your AI keys
+          # 1. Clear any existing .env to prevent conflicts
+          rm -f .env
+          # 2. Use a safe write method to ensure permissions are ignored
+          touch .env
           printf "KEY1=%s\nKEY2=%s\nKEY3=%s\nKEY4=%s\nKEY5=%s\nKEY6=%s\n" \
           "$KEY1" "$KEY2" "$KEY3" "$KEY4" "$KEY5" "$KEY6" > .env
-      - name: Install and Setup Capacitor
+          echo "Environment variables successfully written to .env"
+      - name: Install dependencies
         script: |
-          # 1. Install standard dependencies
-          npm install
-          # 2. Add Capacitor if missing
+          # The fix for 'Get dependencies' error:
+          # This ensures we use npm (matching your package.json) and avoids Flutter errors
+          npm install --legacy-peer-deps
+          # Add Capacitor for the mobile build process
           npm install @capacitor/core @capacitor/cli @capacitor/android
-          # 3. Build your web assets first
+      - name: Build Web Assets
+        script: |
+          # Required before converting to APK
           npm run build
-          # 4. Initialize Capacitor (only if no config file exists)
-          if [ ! -f "capacitor.config.ts" ]; then
-            npx cap init "SAQLAIN AI" "com.saqlainai" --web-dir dist
-          fi
-          # 5. Add and Sync the Android platform
+      - name: Initialize Android Platform
+        script: |
+          # This creates the 'android' folder you are missing on GitHub
+          npx cap init "SAQLAIN AI" "com.saqlainai" --web-dir dist || true
           npx cap add android || true
           npx cap sync android
       - name: Build Android APK
         script: |
-          # Navigates to the generated folder and builds the APK
+          # The final step to generate the file
           cd android && ./gradlew assembleRelease
     artifacts:
       - android/app/build/outputs/apk/release/*.apk

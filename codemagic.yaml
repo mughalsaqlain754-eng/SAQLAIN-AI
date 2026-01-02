@@ -1,6 +1,6 @@
 workflows:
   react-native-android:
-    name: SAQLAIN AI - Bulletproof Turbo
+    name: SAQLAIN AI - Direct Connect Final
     working_directory: . 
     instance_type: mac_mini_m1
     max_build_duration: 60
@@ -19,100 +19,92 @@ workflows:
       - name: Install Dependencies
         script: |
           npm install --legacy-peer-deps
-          # STEP 1: Install the missing Google AI Brain
-          npm install @google/generative-ai --save --legacy-peer-deps
           npm install @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps
           npm install @capacitor/assets --save-dev --legacy-peer-deps
 
-      - name: FIX 1 - Reset Vite Config (Stops Build Crashes)
+      - name: STEP 1 - Create Raw Connection Service
         script: |
-          echo "🧹 Resetting vite.config.ts..."
-          cat <<EOF > vite.config.ts
-          import { defineConfig } from 'vite'
-          import react from '@vitejs/plugin-react'
-
-          export default defineConfig({
-            plugins: [react()],
-            base: './', 
-            build: {
-              outDir: 'dist',
-              emptyOutDir: true,
-            },
-            server: {
-              port: 3000,
-              host: true
-            }
-          })
-          EOF
-
-      - name: FIX 2 - Create Turbo Service (Stops API Errors)
-        script: |
-          echo "✨ Creating Turbo Mode Service..."
+          echo "🔥 Creating Direct Connection Service..."
           mkdir -p services
           
-          # We write the file with 6 Keys AND Simple Syntax (No 'Content[]' errors)
+          # We use a pure FETCH command. No libraries. No SDK bugs.
           cat <<EOF > services/geminiService.ts
-          import { GoogleGenerativeAI } from "@google/generative-ai";
-
-          // TURBO MODE: 6-Key Randomizer
-          const API_KEYS = [
-            "AIzaSyDsWqaqeyFFdAs6rXA8xOBZpwh_uhc4ZXU", 
-            "AIzaSyDBdShSHEOJwV5-fAn5ABJLfKG3RLffoUo", 
-            "AIzaSyByhPkTsT2_zczOGGnHVJ2lLAhv14MNNxk", 
-            "AIzaSyDLlrOBRykDoeIF7YUBsMf1G_rOAK2n53c", 
-            "AIzaSyDbDzk2zEbJpDzLkyPC4a_z9WfMDfuYje0", 
-            "AIzaSyAWfQ9NCe1x5BDR6MDu-tQYoTauqKbMljU"
-          ];
           
-          const RANDOM_KEY = API_KEYS[Math.floor(Math.random() * API_KEYS.length)];
-          const genAI = new GoogleGenerativeAI(RANDOM_KEY);
-          const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-
+          // YOUR CLEAN KEY
+          const API_KEY = "AIzaSyDsWqaqeyFFdAs6rXA8xOBZpwh_uhc4ZXU";
+          
           export async function sendMessageToGemini(message: string, history: any[]) {
+            const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + API_KEY;
+            
             try {
-              // FIXED: Removed strict type ': Content[]' so build never fails
-              const processedHistory = history.slice(-6).map((msg) => ({
-                role: msg.role === 'user' ? 'user' : 'model',
-                parts: [{ text: msg.text }] 
-              }));
-
-              const chat = model.startChat({
-                history: processedHistory,
+              const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: message }] }] })
               });
 
-              const result = await chat.sendMessage(message);
-              const response = await result.response;
-              return response.text();
+              const data = await response.json();
+
+              if (!response.ok) {
+                console.error("Google Error:", data);
+                return "Error: " + (data.error?.message || "Google Rejected Connection");
+              }
+              return data.candidates[0].content.parts[0].text;
               
             } catch (error) {
-              console.error("Gemini API Error:", error);
-              return "Error: Connection failed. Please check your internet.";
+              console.error("Network Error:", error);
+              return "Error: Internet Connection Failed.";
             }
           }
           EOF
 
-      - name: FIX 3 - Inject Turbo Keys into Main App (Backup)
+      - name: STEP 2 - Force App to Use New Service
         script: |
-          echo "🔥 Injecting Turbo Keys into Main App (Backup Layer)..."
+          echo "🔗 Linking App to Direct Connection..."
           
-          # If App.tsx is using its own connection, we force-feed the 6 keys there too.
-          TURBO_CODE='["AIzaSyDsWqaqeyFFdAs6rXA8xOBZpwh_uhc4ZXU", "AIzaSyDBdShSHEOJwV5-fAn5ABJLfKG3RLffoUo", "AIzaSyByhPkTsT2_zczOGGnHVJ2lLAhv14MNNxk", "AIzaSyDLlrOBRykDoeIF7YUBsMf1G_rOAK2n53c", "AIzaSyDbDzk2zEbJpDzLkyPC4a_z9WfMDfuYje0", "AIzaSyAWfQ9NCe1x5BDR6MDu-tQYoTauqKbMljU"][Math.floor(Math.random() * 6)]'
+          # Find the file with the "Neural system failure" text
+          TARGET_FILE=$(grep -r "Neural system failure" . | cut -d: -f1 | head -n 1)
           
-          # We exclude the 'services' folder because we just fixed that one properly above
-          grep -rl --exclude-dir={node_modules,android,dist,services,.git} "new GoogleGenerativeAI" . | xargs -I {} sed -i '' "s|new GoogleGenerativeAI(.*)|new GoogleGenerativeAI($TURBO_CODE)|g" "{}"
-          
-          echo "✅ All layers secured."
+          if [ -z "$TARGET_FILE" ]; then
+             # Backup: Find file with sendMessage
+             TARGET_FILE=$(grep -l "sendMessage" *.tsx 2>/dev/null | head -n 1)
+          fi
+
+          if [ ! -z "$TARGET_FILE" ]; then
+             echo "Updating $TARGET_FILE..."
+             
+             # 1. Add the new import at the top
+             sed -i '' "1s|^|import { sendMessageToGemini } from './services/geminiService';\n|" "$TARGET_FILE"
+             
+             # 2. FORCE the new function. We replace the old "sendMessage" call with ours.
+             # This command looks for where you call the function and swaps it.
+             sed -i '' "s/sendMessage(.*)/sendMessageToGemini(input, messages)/g" "$TARGET_FILE" || true
+             
+             echo "✅ App Logic Updated."
+          else
+             echo "⚠️ Could not auto-link. Build continuing with service file created."
+          fi
 
       - name: Build Web Assets
         script: |
           npm run build
 
-      - name: Sync Android & Icon
+      - name: STEP 3 - Sync & Enforce Permissions
         script: |
           rm -rf android
           npx cap init "SAQLAIN AI" "com.saqlainai" --web-dir dist
           npx cap add android
+          
+          echo "🔓 Unlocking Android Internet Permissions..."
+          
+          # 1. Allow Cleartext (HTTP) traffic
           sed -i '' 's/<application/<application android:usesCleartextTraffic="true"/' android/app/src/main/AndroidManifest.xml
+          
+          # 2. Inject INTERNET PERMISSION (The missing link!)
+          sed -i '' 's/<manifest/<manifest xmlns:android="http:\/\/schemas.android.com\/apk\/res\/android"/' android/app/src/main/AndroidManifest.xml
+          sed -i '' '/<application/i \
+          <uses-permission android:name="android.permission.INTERNET" /> \
+          ' android/app/src/main/AndroidManifest.xml
           
           if [ -f "assets/icon.png" ]; then
             npx capacitor-assets generate android

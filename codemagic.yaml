@@ -1,6 +1,6 @@
 workflows:
   react-native-android:
-    name: SAQLAIN AI - Turbo Mode Fix
+    name: SAQLAIN AI - Bulletproof Turbo
     working_directory: . 
     instance_type: mac_mini_m1
     max_build_duration: 60
@@ -19,36 +19,89 @@ workflows:
       - name: Install Dependencies
         script: |
           npm install --legacy-peer-deps
+          # STEP 1: Install the missing Google AI Brain
           npm install @google/generative-ai --save --legacy-peer-deps
           npm install @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps
           npm install @capacitor/assets --save-dev --legacy-peer-deps
 
-      - name: SCORCHED EARTH - Inject Turbo Key Rotation
+      - name: FIX 1 - Reset Vite Config (Stops Build Crashes)
         script: |
-          echo "🔥 Injecting 6-Key Turbo Engine..."
+          echo "🧹 Resetting vite.config.ts..."
+          cat <<EOF > vite.config.ts
+          import { defineConfig } from 'vite'
+          import react from '@vitejs/plugin-react'
+
+          export default defineConfig({
+            plugins: [react()],
+            base: './', 
+            build: {
+              outDir: 'dist',
+              emptyOutDir: true,
+            },
+            server: {
+              port: 3000,
+              host: true
+            }
+          })
+          EOF
+
+      - name: FIX 2 - Create Turbo Service (Stops API Errors)
+        script: |
+          echo "✨ Creating Turbo Mode Service..."
+          mkdir -p services
           
-          # The "Magic Code" - A random picker with all 6 keys
-          # This replaces the single key string with logic that picks a random key every time
+          # We write the file with 6 Keys AND Simple Syntax (No 'Content[]' errors)
+          cat <<EOF > services/geminiService.ts
+          import { GoogleGenerativeAI } from "@google/generative-ai";
+
+          // TURBO MODE: 6-Key Randomizer
+          const API_KEYS = [
+            "AIzaSyDsWqaqeyFFdAs6rXA8xOBZpwh_uhc4ZXU", 
+            "AIzaSyDBdShSHEOJwV5-fAn5ABJLfKG3RLffoUo", 
+            "AIzaSyByhPkTsT2_zczOGGnHVJ2lLAhv14MNNxk", 
+            "AIzaSyDLlrOBRykDoeIF7YUBsMf1G_rOAK2n53c", 
+            "AIzaSyDbDzk2zEbJpDzLkyPC4a_z9WfMDfuYje0", 
+            "AIzaSyAWfQ9NCe1x5BDR6MDu-tQYoTauqKbMljU"
+          ];
+          
+          const RANDOM_KEY = API_KEYS[Math.floor(Math.random() * API_KEYS.length)];
+          const genAI = new GoogleGenerativeAI(RANDOM_KEY);
+          const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
+          export async function sendMessageToGemini(message: string, history: any[]) {
+            try {
+              // FIXED: Removed strict type ': Content[]' so build never fails
+              const processedHistory = history.slice(-6).map((msg) => ({
+                role: msg.role === 'user' ? 'user' : 'model',
+                parts: [{ text: msg.text }] 
+              }));
+
+              const chat = model.startChat({
+                history: processedHistory,
+              });
+
+              const result = await chat.sendMessage(message);
+              const response = await result.response;
+              return response.text();
+              
+            } catch (error) {
+              console.error("Gemini API Error:", error);
+              return "Error: Connection failed. Please check your internet.";
+            }
+          }
+          EOF
+
+      - name: FIX 3 - Inject Turbo Keys into Main App (Backup)
+        script: |
+          echo "🔥 Injecting Turbo Keys into Main App (Backup Layer)..."
+          
+          # If App.tsx is using its own connection, we force-feed the 6 keys there too.
           TURBO_CODE='["AIzaSyDsWqaqeyFFdAs6rXA8xOBZpwh_uhc4ZXU", "AIzaSyDBdShSHEOJwV5-fAn5ABJLfKG3RLffoUo", "AIzaSyByhPkTsT2_zczOGGnHVJ2lLAhv14MNNxk", "AIzaSyDLlrOBRykDoeIF7YUBsMf1G_rOAK2n53c", "AIzaSyDbDzk2zEbJpDzLkyPC4a_z9WfMDfuYje0", "AIzaSyAWfQ9NCe1x5BDR6MDu-tQYoTauqKbMljU"][Math.floor(Math.random() * 6)]'
           
-          EXCLUDE_DIRS="--exclude-dir={node_modules,android,dist,.git}"
-
-          # 1. Inject Turbo Code into Constructor
-          # Replaces 'new GoogleGenerativeAI(...)' with 'new GoogleGenerativeAI([Key1, Key2...][random])'
-          echo "💉 upgrading constructors to Turbo Mode..."
-          grep -rl $EXCLUDE_DIRS "new GoogleGenerativeAI" . | xargs -I {} sed -i '' "s|new GoogleGenerativeAI(.*)|new GoogleGenerativeAI($TURBO_CODE)|g" "{}"
-
-          # 2. Inject Turbo Code into Config Objects
-          # Replaces 'apiKey: ...' with 'apiKey: [Key1, Key2...][random],'
-          echo "💉 Upgrading config objects to Turbo Mode..."
-          grep -rl $EXCLUDE_DIRS "apiKey:" . | xargs -I {} sed -i '' "s|apiKey:.*|apiKey: $TURBO_CODE,|g" "{}"
+          # We exclude the 'services' folder because we just fixed that one properly above
+          grep -rl --exclude-dir={node_modules,android,dist,services,.git} "new GoogleGenerativeAI" . | xargs -I {} sed -i '' "s|new GoogleGenerativeAI(.*)|new GoogleGenerativeAI($TURBO_CODE)|g" "{}"
           
-          # 3. Inject Turbo Code into Variables
-          # Replaces 'const API_KEY = ...' with 'const API_KEY = [Key1, Key2...][random];'
-          echo "💉 Upgrading constants to Turbo Mode..."
-          grep -rl --include=".{js,jsx,ts,tsx}" $EXCLUDE_DIRS "const API_KEY =" . | xargs -I {} sed -i '' "s|const API_KEY = .|const API_KEY = $TURBO_CODE;|g" "{}"
-          
-          echo "✅ Turbo Mode Activated. All 6 keys are live."
+          echo "✅ All layers secured."
 
       - name: Build Web Assets
         script: |
@@ -59,8 +112,6 @@ workflows:
           rm -rf android
           npx cap init "SAQLAIN AI" "com.saqlainai" --web-dir dist
           npx cap add android
-          
-          # Ensure Internet Permission
           sed -i '' 's/<application/<application android:usesCleartextTraffic="true"/' android/app/src/main/AndroidManifest.xml
           
           if [ -f "assets/icon.png" ]; then

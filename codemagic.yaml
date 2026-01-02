@@ -6,26 +6,34 @@ workflows:
     max_build_duration: 60
     environment:
       groups:
-        - ai_credentials # Ensure KEY1-KEY6 are in this group in Codemagic UI
+        - ai_credentials # Pulls KEY1-KEY6 from your UI
       vars:
         PACKAGE_NAME: "com.saqlainai"
       node: latest
     scripts:
       - name: Setup Environment Variables
         script: |
+          # Creates the .env file for your AI keys
           printf "KEY1=%s\nKEY2=%s\nKEY3=%s\nKEY4=%s\nKEY5=%s\nKEY6=%s\n" \
           "$KEY1" "$KEY2" "$KEY3" "$KEY4" "$KEY5" "$KEY6" > .env
-      - name: Install dependencies
+      - name: Install and Setup Capacitor
         script: |
+          # 1. Install standard dependencies
           npm install
+          # 2. Add Capacitor if missing
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+          # 3. Build your web assets first
+          npm run build
+          # 4. Initialize Capacitor (only if no config file exists)
+          if [ ! -f "capacitor.config.ts" ]; then
+            npx cap init "SAQLAIN AI" "com.saqlainai" --web-dir dist
+          fi
+          # 5. Add and Sync the Android platform
+          npx cap add android || true
+          npx cap sync android
       - name: Build Android APK
         script: |
-          # THE FIX: This command checks if 'android' exists, then builds
-          if [ -d "android" ]; then
-            cd android && ./gradlew assembleRelease
-          else
-            echo "ERROR: 'android' folder not found. Check your GitHub files!"
-            exit 1
-          fi
+          # Navigates to the generated folder and builds the APK
+          cd android && ./gradlew assembleRelease
     artifacts:
-      - "**/release/*.apk"
+      - android/app/build/outputs/apk/release/*.apk

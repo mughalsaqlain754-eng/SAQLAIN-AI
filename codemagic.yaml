@@ -5,34 +5,34 @@ workflows:
     instance_type: mac_mini_m1
     max_build_duration: 60
     environment:
-      java: 21
+      # FIX 1: Downgrade to Java 17. Java 21 is currently causing 'Major Version 65' errors with Capacitor plugins.
+      java: 17
       groups:
         - ai_credentials 
       vars:
         PACKAGE_NAME: "com.saqlainai"
-        # THE JAR KILLER: Forces Gradle to release file locks immediately
+        # FIX 2: Force single-threaded execution and NO DAEMON to prevent JAR locks
         GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=false -Dorg.gradle.vfs.watch=false"
         JAVA_TOOL_OPTIONS: "-Xmx6g"
       node: latest
     scripts:
-      - name: STEP 1 - NUCLEAR RESET & SYSTEM CLEAN
+      - name: STEP 1 - NUCLEAR RESET & SYSTEM PURGE
         script: |
           printf "KEY1=%s\n" "$KEY1" > .env
           export NODE_OPTIONS="--max-old-space-size=4096"
-          # Purge everything that causes the JAR lock error
+          # Purge everything: caches, wrappers, and old android folders
           rm -rf ~/.gradle/caches
           rm -rf ~/.gradle/wrapper
           rm -rf node_modules package-lock.json android dist build capacitor.config.json
           npm install --legacy-peer-deps
           npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/splash-screen @capacitor/device --legacy-peer-deps
 
-      - name: STEP 2 - VITE PATH & API SHIELD WELDING
+      - name: STEP 2 - VITE UNIVERSAL PATH ENGINE
         script: |
-          # 1. Force Vite to build with relative paths (Total Black Screen Fix)
+          # Force Vite to build with relative paths (Total Black Screen Fix)
           npm run build -- --base=./ 
           [ ! -d "dist" ] && mv build dist || true
           
-          # 2. Hardened Interceptor (Neural Link & API Shield)
           USER_API_KEY="$KEY1"
           cat <<EOF > interceptor.js
           <script>
@@ -59,7 +59,7 @@ workflows:
           find dist -name "*.html" -exec sed -i '' 's|type="module"||g' {} +
           find dist -name "*.html" -exec sed -i '' 's|crossorigin||g' {} +
 
-      - name: STEP 3 - FORCE PLATFORM & PATH INJECTION
+      - name: STEP 3 - FORCE PLATFORM & ENVIRONMENT SYNC
         script: |
           cat <<EOF > capacitor.config.json
           {
@@ -70,23 +70,18 @@ workflows:
             "android": { "adjustMarginsForEdgeToEdge": "disable" }
           }
           EOF
-          # FORCE ADD: Ignore errors to prevent Step 4 crash
-          npx cap add android || true
-          # Create missing assets path manually to prevent the 'No such directory' error
+          # Create assets path early to prevent 'No such directory' errors
           mkdir -p android/app/src/main/assets/public
+          npx cap add android || true
           npx cap sync android || true
-          cp -R dist/* android/app/src/main/assets/public/
+          cp -R dist/* android/app/src/main/assets/public/ || true
 
-      - name: STEP 4 - NATIVE ATOMIC STRIKE (V56)
+      - name: STEP 4 - NATIVE ATOMIC STRIKE (V57)
         script: |
           sleep 5
           MAIN_ACTIVITY=$(find android/app/src/main/java -name "MainActivity.java")
-          # Critical Check: Ensure the platform was actually added
-          if [ -z "$MAIN_ACTIVITY" ]; then
-            echo "Repairing missing Android platform..."
-            npx cap add android
-            MAIN_ACTIVITY=$(find android/app/src/main/java -name "MainActivity.java")
-          fi
+          if [ -z "$MAIN_ACTIVITY" ]; then echo "Android project creation failed. Retrying..."; npx cap add android; MAIN_ACTIVITY=$(find android/app/src/main/java -name "MainActivity.java"); fi
+          
           sed -i '' 's/import com.getcapacitor.BridgeActivity;/import com.getcapacitor.BridgeActivity; import android.os.Bundle; import android.os.StrictMode; import android.webkit.WebSettings; import android.webkit.WebView; import android.os.Build;/g' "$MAIN_ACTIVITY"
           cat <<EOF > patch.txt
               @Override
@@ -116,12 +111,13 @@ workflows:
           sed -i '' 's|<manifest|<manifest xmlns:tools="http://schemas.android.com/tools"|g' "$MANIFEST"
           sed -i '' 's|<application|<application android:usesCleartextTraffic="true" tools:node="merge" tools:replace="android:usesCleartextTraffic,android:networkSecurityConfig" android:networkSecurityConfig="@xml/network_security_config"|g' "$MANIFEST"
 
-      - name: STEP 5 - THE CLEAN COMPILE (FORCE-SUCCESS)
+      - name: STEP 5 - THE CLEAN COMPILE (GRADLE 8.7 + JAVA 17)
         script: |
-          export JAVA_HOME=$JAVA_HOME_21
+          # Use Java 17 for the actual build phase to stop the 'Major Version 65' error
+          export JAVA_HOME=$JAVA_HOME_17
           cd android
           echo "sdk.dir=$ANDROID_HOME" > local.properties
-          # Update wrapper inside the folder to fix the bcprov bug locally
+          # Update to Gradle 8.7 which is perfectly compatible with Java 17
           ./gradlew wrapper --gradle-version 8.7 --no-daemon
           ./gradlew clean --no-daemon
           ./gradlew assembleDebug --no-daemon --stacktrace -Pandroid.nonTransitiveRClass=false

@@ -5,33 +5,32 @@ workflows:
     instance_type: mac_mini_m1
     max_build_duration: 60
     environment:
-      # FIX 1: Set global environment to Java 17. Java 21 (v65) is too new for standard plugins.
       java: 17
       groups:
         - ai_credentials 
       vars:
         PACKAGE_NAME: "com.saqlainai"
-        # FIX 2: Force memory limits and disable the daemon to prevent JAR file locks
-        JAVA_TOOL_OPTIONS: "-Xmx6g -Dorg.gradle.daemon=false"
-        GRADLE_OPTS: "-Dorg.gradle.parallel=false"
+        # THE FIX: This line kills the 'Instrumentation' process that causes the 'Version 65' crash
+        GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=false -Dorg.gradle.vfs.watch=false -Dorg.gradle.instrumentation.features=none"
+        JAVA_TOOL_OPTIONS: "-Xmx6g"
       node: latest
     scripts:
-      - name: STEP 1 - NUCLEAR RESET
+      - name: STEP 1 - TOTAL SYSTEM PURGE
         script: |
           printf "KEY1=%s\n" "$KEY1" > .env
           export NODE_OPTIONS="--max-old-space-size=4096"
-          # Purge everything: caches, old android folders, and wrappers
-          rm -rf ~/.gradle/caches
+          # Physically wipe the specific cache folder where the error log says the crash is
+          rm -rf ~/.gradle/caches/jars-9
+          rm -rf ~/.gradle/caches/modules-2
           rm -rf android node_modules package-lock.json dist build capacitor.config.json
           npm install --legacy-peer-deps
           npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/splash-screen @capacitor/device --legacy-peer-deps
 
-      - name: STEP 2 - PROJECT BUILD & AI SHIELD
+      - name: STEP 2 - PROJECT BUILD & API SHIELD
         script: |
-          # Build with relative paths (Total Black Screen Fix)
+          # Use relative paths to prevent 'Black Screen' on all Android versions
           npm run build -- --base=./ 
           [ ! -d "dist" ] && mv build dist || true
-          
           USER_API_KEY="$KEY1"
           cat <<EOF > interceptor.js
           <script>
@@ -57,22 +56,16 @@ workflows:
           find dist -name "*.html" -exec sed -i '' -e '/<head>/r interceptor.js' {} +
           find dist -name "*.html" -exec sed -i '' 's|type="module"||g' {} +
 
-      - name: STEP 3 - FORCE PLATFORM ADD
+      - name: STEP 3 - CLEAN PLATFORM REGENERATION
         script: |
-          cat <<EOF > capacitor.config.json
-          {
-            "appId": "com.saqlainai",
-            "appName": "SAQLAIN AI",
-            "webDir": "dist",
-            "server": { "hostname": "127.0.0.1", "androidScheme": "https", "cleartext": true }
-          }
-          EOF
+          # Map to 127.0.0.1 for 100% device compatibility
+          echo "{ \"appId\": \"com.saqlainai\", \"appName\": \"SAQLAIN AI\", \"webDir\": \"dist\", \"server\": { \"hostname\": \"127.0.0.1\", \"androidScheme\": \"https\", \"cleartext\": true } }" > capacitor.config.json
           npx cap add android
           npx cap sync android
           mkdir -p android/app/src/main/assets/public
           cp -R dist/* android/app/src/main/assets/public/
 
-      - name: STEP 4 - NATIVE REPAIR (V59)
+      - name: STEP 4 - NATIVE APK HARDENING (V61)
         script: |
           MAIN_ACTIVITY=$(find android -name "MainActivity.java")
           sed -i '' 's/import com.getcapacitor.BridgeActivity;/import com.getcapacitor.BridgeActivity; import android.os.Bundle; import android.os.StrictMode; import android.webkit.WebSettings; import android.webkit.WebView; import android.os.Build;/g' "$MAIN_ACTIVITY"
@@ -99,17 +92,16 @@ workflows:
           sed -i '' '/public void onCreate(Bundle savedInstanceState)/,/}/d' "$MAIN_ACTIVITY"
           sed -i '' -e '$i\
           ' patch.txt "$MAIN_ACTIVITY"
-          
           MANIFEST="android/app/src/main/AndroidManifest.xml"
           sed -i '' 's|<manifest|<manifest xmlns:tools="http://schemas.android.com/tools"|g' "$MANIFEST"
           sed -i '' 's|<application|<application android:usesCleartextTraffic="true" tools:node="merge" tools:replace="android:usesCleartextTraffic,android:networkSecurityConfig" android:networkSecurityConfig="@xml/network_security_config"|g' "$MANIFEST"
 
-      - name: STEP 5 - THE CLEAN COMPILE (ALIGNED VERSION)
+      - name: STEP 5 - THE MASTER COMPILE
         script: |
           export JAVA_HOME=$JAVA_HOME_17
           cd android
           echo "sdk.dir=$ANDROID_HOME" > local.properties
-          # Update to a version that supports Java 17 perfectly
+          # Force Gradle 8.7 which is stable for Java 17
           ./gradlew wrapper --gradle-version 8.7 --no-daemon
           ./gradlew clean --no-daemon
           ./gradlew assembleDebug --no-daemon --stacktrace -Pandroid.nonTransitiveRClass=false

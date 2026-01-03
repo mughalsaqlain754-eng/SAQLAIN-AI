@@ -10,28 +10,31 @@ workflows:
         - ai_credentials 
       vars:
         PACKAGE_NAME: "com.saqlainai"
+        # FIX 1: Prevent Gradle from crashing on JAR creation
+        JAVA_TOOL_OPTIONS: "-Xmx4g -Dorg.gradle.daemon=false"
       node: latest
     scripts:
       - name: STEP 1 - NUCLEAR RESET
         script: |
           printf "KEY1=%s\n" "$KEY1" > .env
           export NODE_OPTIONS="--max-old-space-size=4096"
+          # Clear existing Gradle cache to fix the bcprov JAR error
+          rm -rf ~/.gradle/caches
           rm -rf node_modules package-lock.json android dist build capacitor.config.json local.properties
           npm install --legacy-peer-deps
           npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/splash-screen @capacitor/device --legacy-peer-deps
 
-      - name: STEP 2 - FORCE-RELATIVE PATHS & API INTERCEPTOR
+      - name: STEP 2 - VITE PATH & API SHIELD WELDING
         script: |
-          # 1. Force Vite to build with relative paths (Total Black Screen Killer)
-          npm run build -- --base=./ 
+          # 1. Force Vite to build with relative paths (Fixes Black Screen)
+          npm run build -- --base=./
           [ ! -d "dist" ] && mv build dist || true
           
-          # 2. Hardened Interceptor (Fixes API & Neural Link failures)
+          # 2. Hardened Interceptor (Fixes Neural Link / CORS failures)
           USER_API_KEY="$KEY1"
           cat <<EOF > interceptor.js
           <script>
           (function() {
-            window.SAQLAIN_READY = true;
             const KEYS = ["$USER_API_KEY", "AIzaSyDsWqaqeyFFdAs6rXA8xOBZpwh_uhc4ZXU"];
             const oldFetch = window.fetch;
             window.fetch = async function(...args) {
@@ -47,36 +50,18 @@ workflows:
               }
               return oldFetch(...args);
             };
-            // Force hide splash screen to prevent black screen hang
-            document.addEventListener('DOMContentLoaded', () => {
-               setTimeout(() => { if(window.Capacitor) window.Capacitor.Plugins.SplashScreen.hide(); }, 1000);
-            });
           })();
           </script>
           EOF
           find dist -name "*.html" -exec sed -i '' -e '/<head>/r interceptor.js' {} +
-          # Strip module types to support older Android WebViews
           find dist -name "*.html" -exec sed -i '' 's|type="module"||g' {} +
           find dist -name "*.html" -exec sed -i '' 's|crossorigin||g' {} +
+          find dist -name "*.html" -exec sed -i '' 's|<base href="/" />||g' {} +
 
-      - name: STEP 3 - NATIVE CONFIG & ANDROID 15 EDGE-TO-EDGE
+      - name: STEP 3 - NATIVE SYNC & HOSTNAME FIX
         script: |
-          # Use 127.0.0.1 for maximum device compatibility
-          cat <<EOF > capacitor.config.json
-          {
-            "appId": "com.saqlainai",
-            "appName": "SAQLAIN AI",
-            "webDir": "dist",
-            "server": {
-              "hostname": "127.0.0.1",
-              "androidScheme": "https",
-              "cleartext": true
-            },
-            "plugins": {
-              "SplashScreen": { "launchShowDuration": 0 }
-            }
-          }
-          EOF
+          # Use 127.0.0.1 for maximum device compatibility (Fixes Black Screen)
+          echo " { \"appId\": \"com.saqlainai\", \"appName\": \"SAQLAIN AI\", \"webDir\": \"dist\", \"server\": { \"hostname\": \"127.0.0.1\", \"androidScheme\": \"https\", \"cleartext\": true } }" > capacitor.config.json
           npx cap add android
           mkdir -p android/app/src/main/res/xml
           cat <<EOF > android/app/src/main/res/xml/network_security_config.xml
@@ -85,7 +70,7 @@ workflows:
           npx cap sync android
           cp -R dist/* android/app/src/main/assets/public/
 
-      - name: STEP 4 - NATIVE ATOMIC STRIKE (ANDROID 15 COMPATIBILITY)
+      - name: STEP 4 - NATIVE ATOMIC STRIKE (V48)
         script: |
           sleep 3
           MAIN_ACTIVITY=$(find android/app/src/main/java -name "MainActivity.java")
@@ -95,18 +80,18 @@ workflows:
               public void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
                   try {
-                      // Enable remote debugging for edge://inspect
+                      // Fix for remote debugging on Tecno/Samsung
                       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
                           WebView.setWebContentsDebuggingEnabled(true);
                       }
                       StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder().permitAll().build());
                       if (this.bridge != null && this.bridge.getWebView() != null) {
                           WebSettings s = this.bridge.getWebView().getSettings();
-                          s.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+                          s.setMixedContentMode(0); 
                           s.setDomStorageEnabled(true);
                           s.setDatabaseEnabled(true);
                           s.setJavaScriptEnabled(true);
-                          this.bridge.getWebView().setBackgroundColor(android.graphics.Color.WHITE);
+                          this.bridge.getWebView().setBackgroundColor(android.graphics.Color.WHITE); 
                       }
                   } catch (Exception e) {}
               }
@@ -119,11 +104,12 @@ workflows:
           sed -i '' 's|<manifest|<manifest xmlns:tools="http://schemas.android.com/tools"|g' "$MANIFEST"
           sed -i '' 's|<application|<application android:usesCleartextTraffic="true" tools:node="merge" tools:replace="android:usesCleartextTraffic,android:networkSecurityConfig" android:networkSecurityConfig="@xml/network_security_config"|g' "$MANIFEST"
 
-      - name: STEP 5 - THE CLEAN COMPILE
+      - name: STEP 5 - THE CLEAN COMPILE (CACHE-SAFE)
         script: |
           export JAVA_HOME=$JAVA_HOME_17
           cd android
           echo "sdk.dir=$ANDROID_HOME" > local.properties
+          # FIX 2: Disable daemon to prevent JAR file lock
           ./gradlew clean
           ./gradlew assembleDebug --no-daemon --rerun-tasks -Porg.gradle.java.home=$JAVA_HOME_17 -Pandroid.nonTransitiveRClass=false
     artifacts:

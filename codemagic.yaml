@@ -1,38 +1,33 @@
 workflows:
   react-native-android:
-    name: SAQLAIN AI - THE FINAL 1000 PERCENT SUCCESS
+    name: SAQLAIN AI - THE FINAL RECOVERY
     working_directory: . 
     instance_type: mac_mini_m1
     max_build_duration: 60
     environment:
-      # FIX 1: Downgrade to Java 17. Java 21 is currently causing 'Major Version 65' errors with Capacitor plugins.
       java: 17
       groups:
         - ai_credentials 
       vars:
         PACKAGE_NAME: "com.saqlainai"
-        # FIX 2: Force single-threaded execution and NO DAEMON to prevent JAR locks
-        GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=false -Dorg.gradle.vfs.watch=false"
+        GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=false"
         JAVA_TOOL_OPTIONS: "-Xmx6g"
       node: latest
     scripts:
-      - name: STEP 1 - NUCLEAR RESET & SYSTEM PURGE
+      - name: STEP 1 - HARD WIPE & CLEAN INSTALL
         script: |
           printf "KEY1=%s\n" "$KEY1" > .env
-          export NODE_OPTIONS="--max-old-space-size=4096"
-          # Purge everything: caches, wrappers, and old android folders
-          rm -rf ~/.gradle/caches
-          rm -rf ~/.gradle/wrapper
-          rm -rf node_modules package-lock.json android dist build capacitor.config.json
+          # KILL the ghost folders and caches
+          rm -rf android node_modules package-lock.json dist build ~/.gradle/caches
           npm install --legacy-peer-deps
           npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/splash-screen @capacitor/device --legacy-peer-deps
 
-      - name: STEP 2 - VITE UNIVERSAL PATH ENGINE
+      - name: STEP 2 - PROJECT BUILD
         script: |
-          # Force Vite to build with relative paths (Total Black Screen Fix)
           npm run build -- --base=./ 
           [ ! -d "dist" ] && mv build dist || true
           
+          # Inject the AI Shield (API & Neural Link Fix)
           USER_API_KEY="$KEY1"
           cat <<EOF > interceptor.js
           <script>
@@ -57,30 +52,25 @@ workflows:
           EOF
           find dist -name "*.html" -exec sed -i '' -e '/<head>/r interceptor.js' {} +
           find dist -name "*.html" -exec sed -i '' 's|type="module"||g' {} +
-          find dist -name "*.html" -exec sed -i '' 's|crossorigin||g' {} +
 
-      - name: STEP 3 - FORCE PLATFORM & ENVIRONMENT SYNC
+      - name: STEP 3 - FORCE-CREATE ANDROID PLATFORM
         script: |
-          cat <<EOF > capacitor.config.json
-          {
-            "appId": "com.saqlainai",
-            "appName": "SAQLAIN AI",
-            "webDir": "dist",
-            "server": { "hostname": "127.0.0.1", "androidScheme": "https", "cleartext": true },
-            "android": { "adjustMarginsForEdgeToEdge": "disable" }
-          }
-          EOF
-          # Create assets path early to prevent 'No such directory' errors
+          # Create Config
+          echo " { \"appId\": \"com.saqlainai\", \"appName\": \"SAQLAIN AI\", \"webDir\": \"dist\", \"server\": { \"hostname\": \"127.0.0.1\", \"androidScheme\": \"https\", \"cleartext\": true } }" > capacitor.config.json
+          
+          # Force the creation of a fresh Android folder
+          npx cap add android
+          npx cap sync android
+          
+          # Verify directory exists before copying
           mkdir -p android/app/src/main/assets/public
-          npx cap add android || true
-          npx cap sync android || true
-          cp -R dist/* android/app/src/main/assets/public/ || true
+          cp -R dist/* android/app/src/main/assets/public/
 
-      - name: STEP 4 - NATIVE ATOMIC STRIKE (V57)
+      - name: STEP 4 - NATIVE REPAIR (V58)
         script: |
-          sleep 5
-          MAIN_ACTIVITY=$(find android/app/src/main/java -name "MainActivity.java")
-          if [ -z "$MAIN_ACTIVITY" ]; then echo "Android project creation failed. Retrying..."; npx cap add android; MAIN_ACTIVITY=$(find android/app/src/main/java -name "MainActivity.java"); fi
+          # Find the activity file only after we are 100% sure the folder exists
+          MAIN_ACTIVITY=$(find android -name "MainActivity.java")
+          if [ -z "$MAIN_ACTIVITY" ]; then echo "CRITICAL FAILURE: Android folder not found"; exit 1; fi
           
           sed -i '' 's/import com.getcapacitor.BridgeActivity;/import com.getcapacitor.BridgeActivity; import android.os.Bundle; import android.os.StrictMode; import android.webkit.WebSettings; import android.webkit.WebView; import android.os.Build;/g' "$MAIN_ACTIVITY"
           cat <<EOF > patch.txt
@@ -103,21 +93,18 @@ workflows:
                   } catch (Exception e) {}
               }
           EOF
-          sync
           sed -i '' '/public void onCreate(Bundle savedInstanceState)/,/}/d' "$MAIN_ACTIVITY"
           sed -i '' -e '$i\
           ' patch.txt "$MAIN_ACTIVITY"
+          
           MANIFEST="android/app/src/main/AndroidManifest.xml"
           sed -i '' 's|<manifest|<manifest xmlns:tools="http://schemas.android.com/tools"|g' "$MANIFEST"
           sed -i '' 's|<application|<application android:usesCleartextTraffic="true" tools:node="merge" tools:replace="android:usesCleartextTraffic,android:networkSecurityConfig" android:networkSecurityConfig="@xml/network_security_config"|g' "$MANIFEST"
 
-      - name: STEP 5 - THE CLEAN COMPILE (GRADLE 8.7 + JAVA 17)
+      - name: STEP 5 - THE CLEAN COMPILE
         script: |
-          # Use Java 17 for the actual build phase to stop the 'Major Version 65' error
-          export JAVA_HOME=$JAVA_HOME_17
           cd android
           echo "sdk.dir=$ANDROID_HOME" > local.properties
-          # Update to Gradle 8.7 which is perfectly compatible with Java 17
           ./gradlew wrapper --gradle-version 8.7 --no-daemon
           ./gradlew clean --no-daemon
           ./gradlew assembleDebug --no-daemon --stacktrace -Pandroid.nonTransitiveRClass=false

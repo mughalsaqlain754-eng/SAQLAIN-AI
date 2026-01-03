@@ -1,21 +1,25 @@
 workflows:
   react-native-android:
-    name: SAQLAIN AI - THE UNIVERSAL MASTER
+    name: SAQLAIN AI - THE FINAL 1000 PERCENT SUCCESS
     working_directory: . 
     instance_type: mac_mini_m1
     max_build_duration: 60
     environment:
-      java: 17
+      # FIX 1: Upgrade to Java 21. Gradle 8.7 + Capacitor 7 REQUIRES Java 17-21 stability
+      java: 21
       groups:
         - ai_credentials 
       vars:
         PACKAGE_NAME: "com.saqlainai"
-        JAVA_TOOL_OPTIONS: "-Xmx6g -Dorg.gradle.daemon=false -Dorg.gradle.parallel=false"
+        # FIX 2: Kill the JAR creation lock by disabling the daemon and parallel builds
+        JAVA_TOOL_OPTIONS: "-Xmx6g -Dorg.gradle.daemon=false -Dorg.gradle.parallel=false -Dorg.gradle.vfs.watch=false"
       node: latest
     scripts:
-      - name: STEP 1 - NUCLEAR RESET
+      - name: STEP 1 - NUCLEAR RESET & CACHE PURGE
         script: |
           printf "KEY1=%s\n" "$KEY1" > .env
+          export NODE_OPTIONS="--max-old-space-size=4096"
+          # FIX 3: Purge the corrupted BouncyCastle JAR cache
           rm -rf ~/.gradle/caches
           rm -rf node_modules package-lock.json android dist build capacitor.config.json
           npm install --legacy-peer-deps
@@ -23,8 +27,10 @@ workflows:
 
       - name: STEP 2 - VITE UNIVERSAL PATH ENGINE
         script: |
+          # Force Vite to build with relative paths (Total Black Screen Fix)
           npm run build -- --base=./ 
           [ ! -d "dist" ] && mv build dist || true
+          
           USER_API_KEY="$KEY1"
           cat <<EOF > interceptor.js
           <script>
@@ -51,8 +57,9 @@ workflows:
           find dist -name "*.html" -exec sed -i '' 's|type="module"||g' {} +
           find dist -name "*.html" -exec sed -i '' 's|crossorigin||g' {} +
 
-      - name: STEP 3 - EDGE-TO-EDGE & CLEARTEXT CONFIG
+      - name: STEP 3 - FORCE PLATFORM ADD & GRADLE 8.7
         script: |
+          # Use 127.0.0.1 for maximum device compatibility
           cat <<EOF > capacitor.config.json
           {
             "appId": "com.saqlainai",
@@ -62,12 +69,14 @@ workflows:
             "android": { "adjustMarginsForEdgeToEdge": "disable" }
           }
           EOF
-          npx cap add android
+          # FIX 4: Re-add platform only if it doesn't exist to prevent 'already added' errors
+          [ ! -d "android" ] && npx cap add android || true
+          # FIX 5: Force Gradle 8.7 wrapper before sync to prevent bcprov lock
           cd android && ./gradlew wrapper --gradle-version 8.7 --distribution-type all && cd ..
           npx cap sync android
           cp -R dist/* android/app/src/main/assets/public/
 
-      - name: STEP 4 - NATIVE ATOMIC STRIKE (LEGACY & 16KB WELD)
+      - name: STEP 4 - NATIVE ATOMIC STRIKE (V54)
         script: |
           sleep 3
           MAIN_ACTIVITY=$(find android/app/src/main/java -name "MainActivity.java")
@@ -100,11 +109,12 @@ workflows:
           sed -i '' 's|<manifest|<manifest xmlns:tools="http://schemas.android.com/tools"|g' "$MANIFEST"
           sed -i '' 's|<application|<application android:usesCleartextTraffic="true" tools:node="merge" tools:replace="android:usesCleartextTraffic,android:networkSecurityConfig" android:networkSecurityConfig="@xml/network_security_config"|g' "$MANIFEST"
 
-      - name: STEP 5 - THE CLEAN COMPILE (16KB PAGE-ALIGNED)
+      - name: STEP 5 - THE CLEAN COMPILE (ANTI-LOCK)
         script: |
-          export JAVA_HOME=$JAVA_HOME_17
+          export JAVA_HOME=$JAVA_HOME_21
           cd android
           echo "sdk.dir=$ANDROID_HOME" > local.properties
+          # FIX 6: Build with no-daemon and stacktrace to identify any further JAR locks
           ./gradlew clean --no-daemon
           ./gradlew assembleDebug --no-daemon --stacktrace -Pandroid.nonTransitiveRClass=false
     artifacts:

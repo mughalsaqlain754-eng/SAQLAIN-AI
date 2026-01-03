@@ -5,31 +5,30 @@ workflows:
     instance_type: mac_mini_m1
     max_build_duration: 60
     environment:
-      # FIX 1: Move to Java 21 globally. This stops the 'Version 65' crash immediately.
-      java: 21
+      java: 17
       groups:
         - ai_credentials 
       vars:
         PACKAGE_NAME: "com.saqlainai"
-        # FIX 2: Kill the daemon and parallel tasks to ensure the JAR is created cleanly
-        GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=false -Dorg.gradle.vfs.watch=false"
+        # THE KILL SWITCH: This line stops Gradle from scanning/locking the security JAR
+        GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=false -Dorg.gradle.instrumentation.features=none"
         JAVA_TOOL_OPTIONS: "-Xmx6g"
       node: latest
     scripts:
-      - name: STEP 1 - TOTAL SYSTEM PURGE
+      - name: STEP 1 - NUCLEAR CACHE PURGE
         script: |
           printf "KEY1=%s\n" "$KEY1" > .env
           export NODE_OPTIONS="--max-old-space-size=4096"
-          # Physically wipe the corrupted JAR cache identified in your logs
+          # Physically delete the corrupted JAR folder identified in your log
           rm -rf ~/.gradle/caches/jars-9
           rm -rf ~/.gradle/caches/modules-2
           rm -rf android node_modules package-lock.json dist build capacitor.config.json
           npm install --legacy-peer-deps
+          # Force a compatible version of the device plugin
           npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/splash-screen @capacitor/device --legacy-peer-deps
 
-      - name: STEP 2 - PROJECT BUILD & AI SHIELD
+      - name: STEP 2 - PROJECT BUILD & API SHIELD
         script: |
-          # Use relative paths to fix Black Screen on ALL devices
           npm run build -- --base=./ 
           [ ! -d "dist" ] && mv build dist || true
           USER_API_KEY="$KEY1"
@@ -57,16 +56,17 @@ workflows:
           find dist -name "*.html" -exec sed -i '' -e '/<head>/r interceptor.js' {} +
           find dist -name "*.html" -exec sed -i '' 's|type="module"||g' {} +
 
-      - name: STEP 3 - CLEAN PLATFORM REGENERATION
+      - name: STEP 3 - CLEAN PLATFORM SYNC
         script: |
-          # Use 127.0.0.1 for maximum resolution compatibility
           echo "{ \"appId\": \"com.saqlainai\", \"appName\": \"SAQLAIN AI\", \"webDir\": \"dist\", \"server\": { \"hostname\": \"127.0.0.1\", \"androidScheme\": \"https\", \"cleartext\": true } }" > capacitor.config.json
           npx cap add android
           npx cap sync android
+          # Force the use of a stable BouncyCastle version in the Gradle files
+          sed -i '' 's/implementation "org.bouncycastle:bcprov-jdk18on:1.79"/implementation "org.bouncycastle:bcprov-jdk15on:1.70"/g' android/app/build.gradle || true
           mkdir -p android/app/src/main/assets/public
           cp -R dist/* android/app/src/main/assets/public/
 
-      - name: STEP 4 - NATIVE APK HARDENING (V63)
+      - name: STEP 4 - NATIVE HARDENING (V64)
         script: |
           MAIN_ACTIVITY=$(find android -name "MainActivity.java")
           sed -i '' 's/import com.getcapacitor.BridgeActivity;/import com.getcapacitor.BridgeActivity; import android.os.Bundle; import android.os.StrictMode; import android.webkit.WebSettings; import android.webkit.WebView; import android.os.Build;/g' "$MAIN_ACTIVITY"
@@ -97,15 +97,14 @@ workflows:
           sed -i '' 's|<manifest|<manifest xmlns:tools="http://schemas.android.com/tools"|g' "$MANIFEST"
           sed -i '' 's|<application|<application android:usesCleartextTraffic="true" tools:node="merge" tools:replace="android:usesCleartextTraffic,android:networkSecurityConfig" android:networkSecurityConfig="@xml/network_security_config"|g' "$MANIFEST"
 
-      - name: STEP 5 - THE MASTER COMPILE (JAVA 21 ALIGNED)
+      - name: STEP 5 - THE MASTER COMPILE
         script: |
-          export JAVA_HOME=$JAVA_HOME_21
+          export JAVA_HOME=$JAVA_HOME_17
           cd android
           echo "sdk.dir=$ANDROID_HOME" > local.properties
-          # Update to Gradle 8.7 which supports Java 21 perfectly
-          ./gradlew wrapper --gradle-version 8.7 --no-daemon
+          # Force Gradle 8.4 (More stable for multi-android builds)
+          ./gradlew wrapper --gradle-version 8.4 --no-daemon
           ./gradlew clean --no-daemon
-          # Force the compiler to be compatible with older Android phones
           ./gradlew assembleDebug --no-daemon --stacktrace -Pandroid.nonTransitiveRClass=false
     artifacts:
       - android/app/build/outputs/apk/debug/*.apk

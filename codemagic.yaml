@@ -1,6 +1,6 @@
 workflows:
   react-native-android:
-    name: SAQLAIN AI - THE FINAL 1000 PERCENT SUCCESS
+    name: SAQLAIN AI - THE ABSOLUTE FINAL SUCCESS
     working_directory: . 
     instance_type: mac_mini_m1
     max_build_duration: 60
@@ -10,25 +10,25 @@ workflows:
         - ai_credentials 
       vars:
         PACKAGE_NAME: "com.saqlainai"
-        # THE KILL SWITCH: This line stops Gradle from scanning/locking the security JAR
+        # THE KILL SWITCH: Completely disables the feature that is crashing
         GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=false -Dorg.gradle.instrumentation.features=none"
         JAVA_TOOL_OPTIONS: "-Xmx6g"
       node: latest
     scripts:
-      - name: STEP 1 - NUCLEAR CACHE PURGE
+      - name: STEP 1 - NUCLEAR CACHE DESTRUCTION
         script: |
           printf "KEY1=%s\n" "$KEY1" > .env
-          export NODE_OPTIONS="--max-old-space-size=4096"
-          # Physically delete the corrupted JAR folder identified in your log
+          # Physically delete the specific cache folder that keeps failing in your logs
           rm -rf ~/.gradle/caches/jars-9
           rm -rf ~/.gradle/caches/modules-2
+          rm -rf ~/.gradle/caches/transforms-3
           rm -rf android node_modules package-lock.json dist build capacitor.config.json
           npm install --legacy-peer-deps
-          # Force a compatible version of the device plugin
           npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/splash-screen @capacitor/device --legacy-peer-deps
 
-      - name: STEP 2 - PROJECT BUILD & API SHIELD
+      - name: STEP 2 - PROJECT BUILD & AI SHIELD
         script: |
+          # Use relative paths to fix Black Screen on ALL devices
           npm run build -- --base=./ 
           [ ! -d "dist" ] && mv build dist || true
           USER_API_KEY="$KEY1"
@@ -56,17 +56,17 @@ workflows:
           find dist -name "*.html" -exec sed -i '' -e '/<head>/r interceptor.js' {} +
           find dist -name "*.html" -exec sed -i '' 's|type="module"||g' {} +
 
-      - name: STEP 3 - CLEAN PLATFORM SYNC
+      - name: STEP 3 - STABLE PLATFORM SYNC
         script: |
           echo "{ \"appId\": \"com.saqlainai\", \"appName\": \"SAQLAIN AI\", \"webDir\": \"dist\", \"server\": { \"hostname\": \"127.0.0.1\", \"androidScheme\": \"https\", \"cleartext\": true } }" > capacitor.config.json
           npx cap add android
           npx cap sync android
-          # Force the use of a stable BouncyCastle version in the Gradle files
-          sed -i '' 's/implementation "org.bouncycastle:bcprov-jdk18on:1.79"/implementation "org.bouncycastle:bcprov-jdk15on:1.70"/g' android/app/build.gradle || true
+          # FORCE DOWNGRADE: Replace problematic BouncyCastle with stable version
+          find android -name "build.gradle" -exec sed -i '' 's/bcprov-jdk18on:1.79/bcprov-jdk15on:1.70/g' {} +
           mkdir -p android/app/src/main/assets/public
           cp -R dist/* android/app/src/main/assets/public/
 
-      - name: STEP 4 - NATIVE HARDENING (V64)
+      - name: STEP 4 - NATIVE UNIVERSAL HARDENING
         script: |
           MAIN_ACTIVITY=$(find android -name "MainActivity.java")
           sed -i '' 's/import com.getcapacitor.BridgeActivity;/import com.getcapacitor.BridgeActivity; import android.os.Bundle; import android.os.StrictMode; import android.webkit.WebSettings; import android.webkit.WebView; import android.os.Build;/g' "$MAIN_ACTIVITY"
@@ -102,7 +102,7 @@ workflows:
           export JAVA_HOME=$JAVA_HOME_17
           cd android
           echo "sdk.dir=$ANDROID_HOME" > local.properties
-          # Force Gradle 8.4 (More stable for multi-android builds)
+          # Use 8.4 as it is the most stable for this specific environment
           ./gradlew wrapper --gradle-version 8.4 --no-daemon
           ./gradlew clean --no-daemon
           ./gradlew assembleDebug --no-daemon --stacktrace -Pandroid.nonTransitiveRClass=false

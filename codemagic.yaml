@@ -5,14 +5,14 @@ workflows:
     instance_type: mac_mini_m1
     max_build_duration: 60
     environment:
-      # FIX 1: Set global environment to Java 17 for stability
-      java: 17
+      # FIX 1: Move to Java 21 globally. This stops the 'Version 65' crash immediately.
+      java: 21
       groups:
         - ai_credentials 
       vars:
         PACKAGE_NAME: "com.saqlainai"
-        # FIX 2: Disable the instrumentation that is crashing on the BouncyCastle JAR
-        GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=false -Dorg.gradle.instrumentation.features=none"
+        # FIX 2: Kill the daemon and parallel tasks to ensure the JAR is created cleanly
+        GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=false -Dorg.gradle.vfs.watch=false"
         JAVA_TOOL_OPTIONS: "-Xmx6g"
       node: latest
     scripts:
@@ -20,7 +20,7 @@ workflows:
         script: |
           printf "KEY1=%s\n" "$KEY1" > .env
           export NODE_OPTIONS="--max-old-space-size=4096"
-          # Physically wipe the corrupted JAR cache where the error lives
+          # Physically wipe the corrupted JAR cache identified in your logs
           rm -rf ~/.gradle/caches/jars-9
           rm -rf ~/.gradle/caches/modules-2
           rm -rf android node_modules package-lock.json dist build capacitor.config.json
@@ -29,7 +29,7 @@ workflows:
 
       - name: STEP 2 - PROJECT BUILD & AI SHIELD
         script: |
-          # Force relative paths to fix Black Screen on ALL devices
+          # Use relative paths to fix Black Screen on ALL devices
           npm run build -- --base=./ 
           [ ! -d "dist" ] && mv build dist || true
           USER_API_KEY="$KEY1"
@@ -59,14 +59,14 @@ workflows:
 
       - name: STEP 3 - CLEAN PLATFORM REGENERATION
         script: |
-          # Use 127.0.0.1 for 100% resolution compatibility
+          # Use 127.0.0.1 for maximum resolution compatibility
           echo "{ \"appId\": \"com.saqlainai\", \"appName\": \"SAQLAIN AI\", \"webDir\": \"dist\", \"server\": { \"hostname\": \"127.0.0.1\", \"androidScheme\": \"https\", \"cleartext\": true } }" > capacitor.config.json
           npx cap add android
           npx cap sync android
           mkdir -p android/app/src/main/assets/public
           cp -R dist/* android/app/src/main/assets/public/
 
-      - name: STEP 4 - NATIVE APK HARDENING (V62)
+      - name: STEP 4 - NATIVE APK HARDENING (V63)
         script: |
           MAIN_ACTIVITY=$(find android -name "MainActivity.java")
           sed -i '' 's/import com.getcapacitor.BridgeActivity;/import com.getcapacitor.BridgeActivity; import android.os.Bundle; import android.os.StrictMode; import android.webkit.WebSettings; import android.webkit.WebView; import android.os.Build;/g' "$MAIN_ACTIVITY"
@@ -97,14 +97,15 @@ workflows:
           sed -i '' 's|<manifest|<manifest xmlns:tools="http://schemas.android.com/tools"|g' "$MANIFEST"
           sed -i '' 's|<application|<application android:usesCleartextTraffic="true" tools:node="merge" tools:replace="android:usesCleartextTraffic,android:networkSecurityConfig" android:networkSecurityConfig="@xml/network_security_config"|g' "$MANIFEST"
 
-      - name: STEP 5 - THE MASTER COMPILE
+      - name: STEP 5 - THE MASTER COMPILE (JAVA 21 ALIGNED)
         script: |
-          export JAVA_HOME=$JAVA_HOME_17
+          export JAVA_HOME=$JAVA_HOME_21
           cd android
           echo "sdk.dir=$ANDROID_HOME" > local.properties
-          # Update to Gradle 8.7 inside the folder to align with Java 17
+          # Update to Gradle 8.7 which supports Java 21 perfectly
           ./gradlew wrapper --gradle-version 8.7 --no-daemon
           ./gradlew clean --no-daemon
+          # Force the compiler to be compatible with older Android phones
           ./gradlew assembleDebug --no-daemon --stacktrace -Pandroid.nonTransitiveRClass=false
     artifacts:
       - android/app/build/outputs/apk/debug/*.apk

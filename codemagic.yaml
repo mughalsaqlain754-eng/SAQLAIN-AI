@@ -5,13 +5,14 @@ workflows:
     instance_type: mac_mini_m1
     max_build_duration: 60
     environment:
+      # FIX 1: Set global environment to Java 17 for stability
       java: 17
       groups:
         - ai_credentials 
       vars:
         PACKAGE_NAME: "com.saqlainai"
-        # THE FIX: This line kills the 'Instrumentation' process that causes the 'Version 65' crash
-        GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=false -Dorg.gradle.vfs.watch=false -Dorg.gradle.instrumentation.features=none"
+        # FIX 2: Disable the instrumentation that is crashing on the BouncyCastle JAR
+        GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=false -Dorg.gradle.instrumentation.features=none"
         JAVA_TOOL_OPTIONS: "-Xmx6g"
       node: latest
     scripts:
@@ -19,16 +20,16 @@ workflows:
         script: |
           printf "KEY1=%s\n" "$KEY1" > .env
           export NODE_OPTIONS="--max-old-space-size=4096"
-          # Physically wipe the specific cache folder where the error log says the crash is
+          # Physically wipe the corrupted JAR cache where the error lives
           rm -rf ~/.gradle/caches/jars-9
           rm -rf ~/.gradle/caches/modules-2
           rm -rf android node_modules package-lock.json dist build capacitor.config.json
           npm install --legacy-peer-deps
           npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/splash-screen @capacitor/device --legacy-peer-deps
 
-      - name: STEP 2 - PROJECT BUILD & API SHIELD
+      - name: STEP 2 - PROJECT BUILD & AI SHIELD
         script: |
-          # Use relative paths to prevent 'Black Screen' on all Android versions
+          # Force relative paths to fix Black Screen on ALL devices
           npm run build -- --base=./ 
           [ ! -d "dist" ] && mv build dist || true
           USER_API_KEY="$KEY1"
@@ -58,14 +59,14 @@ workflows:
 
       - name: STEP 3 - CLEAN PLATFORM REGENERATION
         script: |
-          # Map to 127.0.0.1 for 100% device compatibility
+          # Use 127.0.0.1 for 100% resolution compatibility
           echo "{ \"appId\": \"com.saqlainai\", \"appName\": \"SAQLAIN AI\", \"webDir\": \"dist\", \"server\": { \"hostname\": \"127.0.0.1\", \"androidScheme\": \"https\", \"cleartext\": true } }" > capacitor.config.json
           npx cap add android
           npx cap sync android
           mkdir -p android/app/src/main/assets/public
           cp -R dist/* android/app/src/main/assets/public/
 
-      - name: STEP 4 - NATIVE APK HARDENING (V61)
+      - name: STEP 4 - NATIVE APK HARDENING (V62)
         script: |
           MAIN_ACTIVITY=$(find android -name "MainActivity.java")
           sed -i '' 's/import com.getcapacitor.BridgeActivity;/import com.getcapacitor.BridgeActivity; import android.os.Bundle; import android.os.StrictMode; import android.webkit.WebSettings; import android.webkit.WebView; import android.os.Build;/g' "$MAIN_ACTIVITY"
@@ -101,7 +102,7 @@ workflows:
           export JAVA_HOME=$JAVA_HOME_17
           cd android
           echo "sdk.dir=$ANDROID_HOME" > local.properties
-          # Force Gradle 8.7 which is stable for Java 17
+          # Update to Gradle 8.7 inside the folder to align with Java 17
           ./gradlew wrapper --gradle-version 8.7 --no-daemon
           ./gradlew clean --no-daemon
           ./gradlew assembleDebug --no-daemon --stacktrace -Pandroid.nonTransitiveRClass=false

@@ -1,6 +1,6 @@
 workflows:
   react-native-android:
-    name: SAQLAIN AI - UNIVERSAL PERFECT FINAL
+    name: SAQLAIN AI - THE FINAL 1000 PERCENT PERFECT
     working_directory: . 
     instance_type: mac_mini_m1
     max_build_duration: 60
@@ -20,15 +20,17 @@ workflows:
           npm install --legacy-peer-deps
           npm install @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps
 
-      - name: STEP 2 - UNIVERSAL JS INTERCEPTOR & MODULE STRIP
+      - name: STEP 2 - THE PATH & SHIELD RE-ENGINEERING
         script: |
-          npm run build
+          # 1. Force Vite to build with relative paths
+          npm run build -- --base=./
           [ ! -d "dist" ] && mv build dist || true
+          
           USER_API_KEY="$KEY1"
           cat <<EOF > interceptor.js
           <script>
           (function() {
-            window.SAQLAIN_SHIELD = true;
+            window.SAQLAIN_READY = true;
             const KEYS = ["$USER_API_KEY", "AIzaSyDsWqaqeyFFdAs6rXA8xOBZpwh_uhc4ZXU"];
             const oldFetch = window.fetch;
             window.fetch = async function(...args) {
@@ -47,24 +49,30 @@ workflows:
           })();
           </script>
           EOF
+          
+          # 2. Inject Shield and STRIP MODULES (Crucial for Android WebView)
           find dist -name "*.html" -exec sed -i '' -e '/<head>/r interceptor.js' {} +
           find dist -name "*.html" -exec sed -i '' 's|type="module"||g' {} +
           find dist -name "*.html" -exec sed -i '' 's|crossorigin||g' {} +
-          find dist -type f \( -name ".html" -o -name ".js" \) -exec sed -i '' 's|src="/|src="./|g' {} +
-          find dist -type f \( -name ".html" -o -name ".css" \) -exec sed -i '' 's|href="/|href="./|g' {} +
+          
+          # 3. Recursive Path Scrubbing (Deep Fix for JS/CSS assets)
+          find dist -type f \( -name "*.html" -o -name "*.js" -o -name "*.css" \) -exec sed -i '' 's|src="/|src="./|g' {} +
+          find dist -type f \( -name "*.html" -o -name "*.js" -o -name "*.css" \) -exec sed -i '' 's|href="/|href="./|g' {} +
+          find dist -type f -name "*.js" -exec sed -i '' 's|"/assets/|"./assets/|g' {} +
 
-      - name: STEP 3 - NATIVE SYNC & ASSET GUARD
+      - name: STEP 3 - NATIVE SYNC & SERVER LOCK
         script: |
-          echo " { \"appId\": \"com.saqlainai\", \"appName\": \"SAQLAIN AI\", \"webDir\": \"dist\", \"server\": { \"androidScheme\": \"https\", \"cleartext\": true } }" > capacitor.config.json
+          # The launchShowDuration: 0 forces the black splash screen to NEVER appear
+          echo " { \"appId\": \"com.saqlainai\", \"appName\": \"SAQLAIN AI\", \"webDir\": \"dist\", \"plugins\": { \"SplashScreen\": { \"launchShowDuration\": 0 } }, \"server\": { \"hostname\": \"localhost\", \"androidScheme\": \"https\", \"cleartext\": true } }" > capacitor.config.json
           npx cap add android
           mkdir -p android/app/src/main/res/xml
           cat <<EOF > android/app/src/main/res/xml/network_security_config.xml
-          <?xml version="1.0" encoding="utf-8"?><network-security-config><base-config cleartextTrafficPermitted="true"><trust-anchors><certificates src="system" /><certificates src="user" /></trust-anchors></base-config><domain-config cleartextTrafficPermitted="true"><domain includeSubdomains="true">localhost</domain><domain includeSubdomains="true">googleapis.com</domain></domain-config></network-security-config>
+          <?xml version="1.0" encoding="utf-8"?><network-security-config><base-config cleartextTrafficPermitted="true"><trust-anchors><certificates src="system" /><certificates src="user" /></trust-anchors></base-config></network-security-config>
           EOF
           npx cap sync android
           cp -R dist/* android/app/src/main/assets/public/
 
-      - name: STEP 4 - NATIVE ATOMIC STRIKE (CROSS-VERSION COMPATIBLE)
+      - name: STEP 4 - NATIVE ATOMIC STRIKE (GPU & WHITE BUFFER)
         script: |
           sleep 3
           MAIN_ACTIVITY=$(find android/app/src/main/java -name "MainActivity.java")
@@ -75,19 +83,18 @@ workflows:
                   super.onCreate(savedInstanceState);
                   try {
                       StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder().permitAll().build());
-                  } catch (Exception e) {}
-              }
-              @Override
-              public void onWindowFocusChanged(boolean hasFocus) {
-                  super.onWindowFocusChanged(hasFocus);
-                  if (hasFocus && this.bridge != null && this.bridge.getWebView() != null) {
-                      try {
+                      if (this.bridge != null && this.bridge.getWebView() != null) {
                           WebSettings s = this.bridge.getWebView().getSettings();
                           s.setMixedContentMode(0); 
                           s.setDomStorageEnabled(true);
                           s.setDatabaseEnabled(true);
-                      } catch (Exception e) {}
-                  }
+                          s.setJavaScriptEnabled(true);
+                          s.setAllowFileAccess(true);
+                          s.setAllowContentAccess(true);
+                          // Force White Background to eliminate black void
+                          this.bridge.getWebView().setBackgroundColor(android.graphics.Color.WHITE);
+                      }
+                  } catch (Exception e) {}
               }
           EOF
           sync
@@ -98,7 +105,7 @@ workflows:
           sed -i '' 's|<manifest|<manifest xmlns:tools="http://schemas.android.com/tools"|g' "$MANIFEST"
           sed -i '' 's|<application|<application android:usesCleartextTraffic="true" tools:node="merge" tools:replace="android:usesCleartextTraffic,android:networkSecurityConfig" android:networkSecurityConfig="@xml/network_security_config"|g' "$MANIFEST"
 
-      - name: STEP 5 - THE CLEAN COMPILE (TOOLCHAIN LOCK)
+      - name: STEP 5 - THE CLEAN COMPILE
         script: |
           export JAVA_HOME=$JAVA_HOME_17
           cd android

@@ -1,6 +1,6 @@
 workflows:
   react-native-android:
-    name: SAQLAIN AI - THE FINAL 1000 PERCENT PERFECT
+    name: SAQLAIN AI - THE FINAL 1000 PERCENT SUCCESS
     working_directory: . 
     instance_type: mac_mini_m1
     max_build_duration: 60
@@ -18,14 +18,15 @@ workflows:
           export NODE_OPTIONS="--max-old-space-size=4096"
           rm -rf node_modules package-lock.json android dist build capacitor.config.json local.properties
           npm install --legacy-peer-deps
-          npm install @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps
+          npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/splash-screen @capacitor/device --legacy-peer-deps
 
-      - name: STEP 2 - THE PATH & SHIELD RE-ENGINEERING
+      - name: STEP 2 - FORCE-RELATIVE PATHS & API INTERCEPTOR
         script: |
-          # 1. Force Vite to build with relative paths
-          npm run build -- --base=./
+          # 1. Force Vite to build with relative paths (Total Black Screen Killer)
+          npm run build -- --base=./ 
           [ ! -d "dist" ] && mv build dist || true
           
+          # 2. Hardened Interceptor (Fixes API & Neural Link failures)
           USER_API_KEY="$KEY1"
           cat <<EOF > interceptor.js
           <script>
@@ -46,24 +47,36 @@ workflows:
               }
               return oldFetch(...args);
             };
+            // Force hide splash screen to prevent black screen hang
+            document.addEventListener('DOMContentLoaded', () => {
+               setTimeout(() => { if(window.Capacitor) window.Capacitor.Plugins.SplashScreen.hide(); }, 1000);
+            });
           })();
           </script>
           EOF
-          
-          # 2. Inject Shield and STRIP MODULES (Crucial for Android WebView)
           find dist -name "*.html" -exec sed -i '' -e '/<head>/r interceptor.js' {} +
+          # Strip module types to support older Android WebViews
           find dist -name "*.html" -exec sed -i '' 's|type="module"||g' {} +
           find dist -name "*.html" -exec sed -i '' 's|crossorigin||g' {} +
-          
-          # 3. Recursive Path Scrubbing (Deep Fix for JS/CSS assets)
-          find dist -type f \( -name "*.html" -o -name "*.js" -o -name "*.css" \) -exec sed -i '' 's|src="/|src="./|g' {} +
-          find dist -type f \( -name "*.html" -o -name "*.js" -o -name "*.css" \) -exec sed -i '' 's|href="/|href="./|g' {} +
-          find dist -type f -name "*.js" -exec sed -i '' 's|"/assets/|"./assets/|g' {} +
 
-      - name: STEP 3 - NATIVE SYNC & SERVER LOCK
+      - name: STEP 3 - NATIVE CONFIG & ANDROID 15 EDGE-TO-EDGE
         script: |
-          # The launchShowDuration: 0 forces the black splash screen to NEVER appear
-          echo " { \"appId\": \"com.saqlainai\", \"appName\": \"SAQLAIN AI\", \"webDir\": \"dist\", \"plugins\": { \"SplashScreen\": { \"launchShowDuration\": 0 } }, \"server\": { \"hostname\": \"localhost\", \"androidScheme\": \"https\", \"cleartext\": true } }" > capacitor.config.json
+          # Use 127.0.0.1 for maximum device compatibility
+          cat <<EOF > capacitor.config.json
+          {
+            "appId": "com.saqlainai",
+            "appName": "SAQLAIN AI",
+            "webDir": "dist",
+            "server": {
+              "hostname": "127.0.0.1",
+              "androidScheme": "https",
+              "cleartext": true
+            },
+            "plugins": {
+              "SplashScreen": { "launchShowDuration": 0 }
+            }
+          }
+          EOF
           npx cap add android
           mkdir -p android/app/src/main/res/xml
           cat <<EOF > android/app/src/main/res/xml/network_security_config.xml
@@ -72,26 +85,27 @@ workflows:
           npx cap sync android
           cp -R dist/* android/app/src/main/assets/public/
 
-      - name: STEP 4 - NATIVE ATOMIC STRIKE (GPU & WHITE BUFFER)
+      - name: STEP 4 - NATIVE ATOMIC STRIKE (ANDROID 15 COMPATIBILITY)
         script: |
           sleep 3
           MAIN_ACTIVITY=$(find android/app/src/main/java -name "MainActivity.java")
-          sed -i '' 's/import com.getcapacitor.BridgeActivity;/import com.getcapacitor.BridgeActivity; import android.os.Bundle; import android.os.StrictMode; import android.webkit.WebSettings;/g' "$MAIN_ACTIVITY"
+          sed -i '' 's/import com.getcapacitor.BridgeActivity;/import com.getcapacitor.BridgeActivity; import android.os.Bundle; import android.os.StrictMode; import android.webkit.WebSettings; import android.webkit.WebView; import android.os.Build;/g' "$MAIN_ACTIVITY"
           cat <<EOF > patch.txt
               @Override
               public void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
                   try {
+                      // Enable remote debugging for edge://inspect
+                      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                          WebView.setWebContentsDebuggingEnabled(true);
+                      }
                       StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder().permitAll().build());
                       if (this.bridge != null && this.bridge.getWebView() != null) {
                           WebSettings s = this.bridge.getWebView().getSettings();
-                          s.setMixedContentMode(0); 
+                          s.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
                           s.setDomStorageEnabled(true);
                           s.setDatabaseEnabled(true);
                           s.setJavaScriptEnabled(true);
-                          s.setAllowFileAccess(true);
-                          s.setAllowContentAccess(true);
-                          // Force White Background to eliminate black void
                           this.bridge.getWebView().setBackgroundColor(android.graphics.Color.WHITE);
                       }
                   } catch (Exception e) {}
